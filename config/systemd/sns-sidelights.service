@@ -1,0 +1,17 @@
+# ai-input
+[Unit]
+Description=Star and Shadow sidelight controller
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/sidelights
+ExecStartPre=/bin/sleep 30
+ExecStart=/home/pi/sidelights/main
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
