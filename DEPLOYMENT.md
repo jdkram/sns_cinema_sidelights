@@ -43,3 +43,5 @@ For connectivity risk decisions and update policy, see `OPERATIONS.md`.
 - `i2cdetect -y 1` should show expected PCA9685 addresses (commonly `0x40` and `0x60`)
 - verify button input path with `python test.py` (if present)
 - view logs with `journalctl -u sns-sidelights.service -f`
+
+Before changing architecture/refactoring behaviour, complete `BASELINE_SIGNOFF.md` on the target Pi.

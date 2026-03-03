@@ -132,3 +132,78 @@ Choose **managed online mode** only if all are true:
 Start with **offline mode + documented hotspot maintenance procedure**.
 
 This gives low attack surface and still allows troubleshooting when needed.
+
+## MicroSD wear reduction (recommended baseline)
+
+These steps reduce write pressure without making the system hard to maintain.
+
+### 1) Use suitable storage
+
+- use high-endurance microSD (surveillance/industrial grade where possible)
+- avoid unknown or mixed batches of cheap cards
+- keep one tested spare card cloned from known-good image
+
+### 2) Limit unnecessary writes
+
+- keep logging minimal and bounded
+- do not run verbose debug logs permanently
+- avoid writing app telemetry to file in a tight loop
+
+For `journald`, set caps in `/etc/systemd/journald.conf` (example values):
+
+```ini
+[Journal]
+Storage=persistent
+SystemMaxUse=100M
+SystemKeepFree=50M
+RuntimeMaxUse=30M
+MaxFileSec=7day
+```
+
+Then restart logging service:
+
+```bash
+sudo systemctl restart systemd-journald
+```
+
+### 3) Reduce swap wear
+
+On low-memory Pi units, swap can write a lot under pressure.
+
+- if memory headroom is acceptable, reduce swap usage aggressively
+
+Set low swappiness in `/etc/sysctl.conf`:
+
+```ini
+vm.swappiness=10
+```
+
+Apply immediately:
+
+```bash
+sudo sysctl -p
+```
+
+### 4) Prefer clean shutdowns
+
+- always use `sudo shutdown -h now` before removing power when possible
+- consider a small UPS or controlled power sequence if outages are frequent
+
+### 5) Keep write-heavy work off the Pi
+
+- build/test major changes on a bench machine first
+- deploy only the needed binary/source updates to production Pi
+
+### 6) Plan replacement cadence
+
+- assume SD card is a consumable
+- refresh proactively (for example every 12 to 24 months in regular service)
+
+## Advanced wear options (optional)
+
+Only use these if maintainers are comfortable recovering Linux systems:
+
+- temporary files in RAM (`tmpfs` for `/tmp`)
+- read-only root/overlay approach
+
+These can improve lifespan but add recovery complexity.

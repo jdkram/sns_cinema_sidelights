@@ -33,6 +33,18 @@ Public code for a Raspberry Pi based sidelight controller used at Star and Shado
 - starts one sequence per button press
 - updates LED brightness through PCA9685 over I2C
 
+## Current button map (important)
+
+Current code maps buttons to sequences in this order:
+
+1. **Button 1** → Ambient (slow random fades)
+2. **Button 2** → FadeOutSimple (all lights fade down to off)
+3. **Button 3** → HeartBeat (double-pulse loop)
+4. **Button 4** → FadeInSparkle (sparkle pulses, then full brightness)
+5. **Button 5** → KnightRider (back-and-forth sweep loop)
+
+If this mapping changes in code, update docs in the same commit.
+
 ## Deployment
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for service setup and reliability guidance.
@@ -40,6 +52,10 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for service setup and reliability guidance.
 For a beginner-friendly step-by-step guide (flash card, SSH, install, auto-start), see [USER_SETUP.md](USER_SETUP.md).
 
 For network policy, hardening, and update automation choices, see [OPERATIONS.md](OPERATIONS.md).
+
+For adding/changing lighting patterns safely, see [DEVELOPMENT.md](DEVELOPMENT.md).
+
+Before major refactors, run and complete [BASELINE_SIGNOFF.md](BASELINE_SIGNOFF.md).
 
 ## Security and operations
 

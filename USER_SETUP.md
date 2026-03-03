@@ -4,6 +4,18 @@
 
 This guide is for volunteers who need to set up a replacement microSD card and get the sidelight controller running again.
 
+## Button map (read this first)
+
+Current behaviour of the 5 physical buttons:
+
+1. **Button 1**: Ambient (slow random fades)
+2. **Button 2**: Fade out (all lights gradually off)
+3. **Button 3**: Heartbeat (double pulse loop)
+4. **Button 4**: Fade-in sparkle (sparkles then reaches full brightness)
+5. **Button 5**: Knight Rider sweep (back-and-forth moving light)
+
+If the observed behaviour does not match this list, ask a maintainer whether a newer pattern version has been deployed.
+
 ## What you need
 
 - Raspberry Pi Zero controller box
