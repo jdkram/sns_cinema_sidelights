@@ -2,6 +2,8 @@
 
 # Star and Shadow sidelight controller
 
+Repository status: this is the active public development repository for the sidelight controller.
+
 Public code for a Raspberry Pi based sidelight controller used at Star and Shadow cinema.
 
 ## What this repository contains
