@@ -6,6 +6,10 @@ Repository status: this is the active public development repository for the side
 
 Public code for a Raspberry Pi based sidelight controller used at Star and Shadow cinema.
 
+## New install? Start here
+
+To set things up from scratch, go to [USER_SETUP.md](USER_SETUP.md).
+
 ## What this repository contains
 
 - C++ controller application (`main`)
