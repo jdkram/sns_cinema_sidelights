@@ -180,14 +180,14 @@ sudo apt install -y build-essential cmake i2c-tools git
 If you have this repo locally, from your laptop:
 
 ```bash
-scp -r public-export <username>@<pi-ip-address>:/home/<username>/sidelights
+scp -r sns_cinema_sidelights <username>@<pi-ip-address>:/home/<username>/sidelights
 ```
 
 If you have a public GitHub repo, on the Pi:
 
 ```bash
 cd /home/<username>
-git clone <repo-url> sidelights
+git clone https://github.com/jdkram/sns_cinema_sidelights.git sidelights
 ```
 
 ## Part 6, build and test manually
