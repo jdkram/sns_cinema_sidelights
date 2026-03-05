@@ -237,6 +237,352 @@ class SequenceKnightRider(Sequence):
 
 
 # ---------------------------------------------------------------------------
+# Sequence 6: breathing
+# ---------------------------------------------------------------------------
+
+class SequenceBreathing(Sequence):
+    """
+    All 24 LEDs rise and fall together in a slow, regular breath.
+
+    The exhale (FALL) is deliberately longer than the inhale (RISE), and the
+    rest at low brightness gives the cycle a settled, unhurried quality.
+    A full breath takes about 14 seconds.
+
+    Button: 6
+    """
+
+    PEAK = 60       # brightness at top of inhale
+    BASE = 8        # resting brightness between breaths
+    RISE = 4.0      # seconds to inhale
+    HOLD_HIGH = 1.5 # seconds to hold at peak
+    FALL = 5.5      # seconds to exhale
+    REST = 3.0      # seconds to rest before the next breath
+
+    def __init__(self, led_manager: LEDManager) -> None:
+        super().__init__(led_manager, loop=True)
+
+        self.fade_event_add_all_leds(self.PEAK, 0.0, self.RISE)
+        t = self.RISE + self.HOLD_HIGH
+        self.fade_event_add_all_leds(self.BASE, t, self.FALL)
+
+        self._length_seconds = t + self.FALL + self.REST
+
+
+# ---------------------------------------------------------------------------
+# Sequence 7: drift
+# ---------------------------------------------------------------------------
+
+class SequenceDrift(Sequence):
+    """
+    A slow wave of light sweeps across all 24 LEDs, then leaves them dark
+    for a long rest before the next pass.
+
+    Each LED fades up as the wave front reaches it, then fades back to zero.
+    The stagger between consecutive LEDs (STAGGER seconds) determines wave
+    speed. One full pass takes about 16 seconds; the cycle including the rest
+    is about 23 seconds.
+
+    Button: 7
+    """
+
+    STAGGER = 0.45      # seconds between each consecutive LED's fade start
+    RISE_TIME = 2.5     # seconds for each LED to reach peak
+    FALL_TIME = 3.5     # seconds for each LED to fade out
+    PEAK = 55
+    GAP = 7.0           # dark pause after the last LED finishes
+
+    def __init__(self, led_manager: LEDManager) -> None:
+        super().__init__(led_manager, loop=True)
+
+        self.brightness_set_event_add_all_leds(0, 0.0)
+
+        for i in range(24):
+            t_up = 0.01 + i * self.STAGGER
+            t_down = t_up + self.RISE_TIME
+            self.fade_event_add(i + 1, self.PEAK, t_up, self.RISE_TIME)
+            self.fade_event_add(i + 1, 0, t_down, self.FALL_TIME)
+
+        last_fall_end = 0.01 + 23 * self.STAGGER + self.RISE_TIME + self.FALL_TIME
+        self._length_seconds = last_fall_end + self.GAP
+
+
+# ---------------------------------------------------------------------------
+# Sequence 8: ember
+# ---------------------------------------------------------------------------
+
+class SequenceEmber(Sequence):
+    """
+    Each LED drifts independently through a narrow low-brightness range on
+    its own slow, random schedule. No two LEDs are ever in sync.
+
+    The effect is like dying embers or very distant, gentle firelight:
+    organic, unhurried, and quiet. Generates 10 minutes of unique content
+    before looping.
+
+    Button: 8
+    """
+
+    MIN_BRIGHTNESS = 12
+    MAX_BRIGHTNESS = 55
+    MIN_FADE = 3.0      # seconds, shortest LED transition
+    MAX_FADE = 8.0      # seconds, longest LED transition
+    TOTAL_SECONDS = 600.0
+
+    def __init__(self, led_manager: LEDManager) -> None:
+        super().__init__(led_manager, loop=True, length_seconds=self.TOTAL_SECONDS)
+
+        fade_range = self.MAX_FADE - self.MIN_FADE
+
+        for led in range(1, 25):
+            # Stagger each LED's start so they're out of phase from the first frame.
+            t = self.random_fraction() * self.MAX_FADE
+            while t < self.TOTAL_SECONDS:
+                brightness = random.randint(self.MIN_BRIGHTNESS, self.MAX_BRIGHTNESS)
+                fade_time = self.MIN_FADE + self.random_fraction() * fade_range
+                self.fade_event_add(led, brightness, t, fade_time)
+                t += fade_time
+
+
+# ---------------------------------------------------------------------------
+# Sequence 9: 4-7-8 breathing
+# ---------------------------------------------------------------------------
+
+class SequenceBreathing478(Sequence):
+    """
+    Guided 4-7-8 breathing sequence.
+
+    Phases:
+        Inhale   4 s  LEDs fill from the outer edges toward the centre,
+                      like two lungs expanding together.
+        Hold     7 s  All LEDs glow steadily at peak brightness.
+        Exhale   8 s  LEDs empty from the centre outward.
+        Rest     1 s  Brief dark pause before the next breath.
+
+    Assumes LEDs 1-12 are the left sidelight (outer = LED 1) and LEDs
+    13-24 are the right sidelight (outer = LED 24). If the physical layout
+    differs, reorder inhale_order.
+
+    Button: 9
+    """
+
+    PEAK = 70
+    BASE = 0
+
+    INHALE = 4.0
+    HOLD = 7.0
+    EXHALE = 8.0
+    REST = 1.0
+
+    INHALE_FADE = 2.5   # each LED's individual fade duration during inhale
+    INHALE_STAGGER = 0.05   # gap between consecutive LEDs' fade starts
+
+    EXHALE_FADE = 4.0
+    EXHALE_STAGGER = 0.08
+
+    def __init__(self, led_manager: LEDManager) -> None:
+        super().__init__(led_manager, loop=True)
+
+        self.brightness_set_event_add_all_leds(self.BASE, 0.0)
+
+        # Fill order: outer edges to centre (left lung left→right, right lung right→left)
+        left_in = list(range(1, 13))         # 1 … 12
+        right_in = list(range(24, 12, -1))   # 24 … 13
+        inhale_order = [led for pair in zip(left_in, right_in) for led in pair]
+        exhale_order = list(reversed(inhale_order))  # centre outward
+
+        for i, led in enumerate(inhale_order):
+            self.fade_event_add(led, self.PEAK, 0.01 + i * self.INHALE_STAGGER, self.INHALE_FADE)
+
+        t_exhale = self.INHALE + self.HOLD
+        for i, led in enumerate(exhale_order):
+            self.fade_event_add(led, self.BASE, t_exhale + i * self.EXHALE_STAGGER, self.EXHALE_FADE)
+
+        self._length_seconds = self.INHALE + self.HOLD + self.EXHALE + self.REST
+
+
+# ---------------------------------------------------------------------------
+# Sequence 10: Projector
+# ---------------------------------------------------------------------------
+
+class SequenceProjector(Sequence):
+    """
+    Mimics the flickering light of a vintage film projector reflecting off
+    the screen.
+
+    Creates a nostalgic atmosphere using rapid, random brightness fluctuations
+    typical of old film stock or shutter flicker.
+    """
+
+    def __init__(self, led_manager: LEDManager) -> None:
+        super().__init__(led_manager, loop=True)
+
+        current_time = 0.0
+        # Generate 10 seconds of flicker loop
+        while current_time < 10.0:
+            # Random brightness between 20% and 80%
+            brightness = 20 + self.random_fraction() * 60
+            # Hold for a short random duration (frame/scene duration)
+            duration = 0.05 + self.random_fraction() * 0.15
+
+            self.brightness_set_event_add_all_leds(brightness, current_time)
+            current_time += duration
+
+        self._length_seconds = current_time
+
+
+# ---------------------------------------------------------------------------
+# Sequence 11: Sunrise
+# ---------------------------------------------------------------------------
+
+class SequenceSunrise(Sequence):
+    """
+    A slow, gentle brightening to wake the audience after a film.
+
+    Starts from black and gradually fades up to full brightness over 2 minutes.
+    Useful for post-credits or cleaning lighting.
+    """
+
+    def __init__(self, led_manager: LEDManager) -> None:
+        super().__init__(led_manager, loop=False)
+
+        # Start black
+        self.brightness_set_event_add_all_leds(0, 0.0)
+
+        # Phase 1: Very slow dawn (0% -> 20% over 60s)
+        self.fade_event_add_all_leds(20, 0.1, 60.0)
+
+        # Phase 2: Brightening (20% -> 100% over 60s)
+        self.fade_event_add_all_leds(100, 60.1, 60.0)
+
+
+# ---------------------------------------------------------------------------
+# Sequence 12: Countdown
+# ---------------------------------------------------------------------------
+
+class SequenceCountdown(Sequence):
+    """
+    Visual countdown (5-4-3-2-1) for starting a film.
+
+    Flashes all lights bright on the second, then fades them out, mimicking
+    old film leader countdowns.
+    """
+
+    def __init__(self, led_manager: LEDManager) -> None:
+        super().__init__(led_manager, loop=False)
+
+        current_time = 0.0
+
+        # 5 seconds countdown
+        for _ in range(5):
+            # Flash on
+            self.brightness_set_event_add_all_leds(100, current_time)
+            # Fast fade out
+            self.fade_event_add_all_leds(0, current_time + 0.1, 0.8)
+            current_time += 1.0
+
+        # Final flash at 0 (Go!)
+        self.brightness_set_event_add_all_leds(100, current_time)
+        self.fade_event_add_all_leds(0, current_time + 0.5, 2.0)
+
+
+# ---------------------------------------------------------------------------
+# Sequence 13: Block Tower
+# ---------------------------------------------------------------------------
+
+class SequenceBlockTower(Sequence):
+    """
+    Columns fill from the top, one at a time, stacking up like Tetris blocks.
+    Each column fills to the bottom, then the next column starts.
+    When all columns are filled, the sequence loops and clears.
+    """
+    def __init__(self, led_manager: LEDManager) -> None:
+        super().__init__(led_manager, loop=True)
+        num_leds = 24
+        num_cols = 6
+        num_rows = 4
+        leds_per_col = num_rows
+        fill_time = 0.2  # seconds per block
+        clear_time = 0.5
+        current_time = 0.0
+        # Fill columns left to right
+        for col in range(num_cols):
+            for row in range(num_rows):
+                led = col * leds_per_col + row + 1
+                self.brightness_set_event_add(led, 100, current_time)
+                current_time += fill_time
+        # Hold, then clear all
+        for col in range(num_cols):
+            for row in range(num_rows):
+                led = col * leds_per_col + row + 1
+                self.brightness_set_event_add(led, 0, current_time)
+            current_time += clear_time
+        self._length_seconds = current_time
+
+# ---------------------------------------------------------------------------
+# Sequence 14: Snake
+# ---------------------------------------------------------------------------
+
+class SequenceSnake(Sequence):
+    """
+    A single bright "snake" moves through the LEDs, wrapping at the end.
+    The snake is 4 LEDs long and moves one step at a time.
+    """
+    def __init__(self, led_manager: LEDManager) -> None:
+        super().__init__(led_manager, loop=True)
+        num_leds = 24
+        snake_length = 4
+        step_time = 0.15
+        current_time = 0.0
+        for step in range(num_leds):
+            # Turn all off
+            for led in range(1, num_leds + 1):
+                self.brightness_set_event_add(led, 0, current_time)
+            # Turn on snake
+            for i in range(snake_length):
+                led = ((step + i) % num_leds) + 1
+                self.brightness_set_event_add(led, 100, current_time)
+            current_time += step_time
+        self._length_seconds = current_time
+
+# ---------------------------------------------------------------------------
+# Sequence 15: Columns and Rows
+# ---------------------------------------------------------------------------
+
+class SequenceColumnsRows(Sequence):
+    """
+    Columns fill in from the sides, then rows drop in from the top.
+    """
+    def __init__(self, led_manager: LEDManager) -> None:
+        super().__init__(led_manager, loop=True)
+        num_cols = 6
+        num_rows = 4
+        leds_per_col = num_rows
+        fill_time = 0.12
+        current_time = 0.0
+        # Columns in from sides (outer to centre)
+        col_order = [0, 5, 1, 4, 2, 3]
+        for col in col_order:
+            for row in range(num_rows):
+                led = col * leds_per_col + row + 1
+                self.brightness_set_event_add(led, 100, current_time)
+            current_time += fill_time
+        # Clear
+        for led in range(1, num_cols * num_rows + 1):
+            self.brightness_set_event_add(led, 0, current_time)
+        current_time += 0.3
+        # Rows in from top
+        for row in range(num_rows):
+            for col in range(num_cols):
+                led = col * leds_per_col + row + 1
+                self.brightness_set_event_add(led, 100, current_time)
+            current_time += fill_time
+        # Clear
+        for led in range(1, num_cols * num_rows + 1):
+            self.brightness_set_event_add(led, 0, current_time)
+        self._length_seconds = current_time
+
+
+# ---------------------------------------------------------------------------
 # Registry -- add new sequences here
 # ---------------------------------------------------------------------------
 
@@ -246,6 +592,16 @@ SEQUENCES: dict[str, type[Sequence]] = {
     "heartbeat": SequenceHeartBeat,
     "sparkle": SequenceFadeInSparkle,
     "knightrider": SequenceKnightRider,
+    "breathing": SequenceBreathing,
+    "drift": SequenceDrift,
+    "ember": SequenceEmber,
+    "breathing478": SequenceBreathing478,
+    "projector": SequenceProjector,
+    "sunrise": SequenceSunrise,
+    "countdown": SequenceCountdown,
+    "blocktower": SequenceBlockTower,
+    "snake": SequenceSnake,
+    "columnsrows": SequenceColumnsRows,
 }
 
 BUTTON_MAP: dict[int, str] = {
@@ -254,4 +610,14 @@ BUTTON_MAP: dict[int, str] = {
     3: "heartbeat",
     4: "sparkle",
     5: "knightrider",
+    6: "breathing",
+    7: "drift",
+    8: "ember",
+    9: "breathing478",
+    10: "projector",
+    11: "sunrise",
+    12: "countdown",
+    13: "blocktower",
+    14: "snake",
+    15: "columnsrows",
 }
