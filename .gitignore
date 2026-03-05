@@ -10,3 +10,4 @@ main
 .vscode/
 .DS_Store
 *.swp
+simulator/__pycache__/
