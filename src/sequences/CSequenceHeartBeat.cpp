@@ -11,12 +11,16 @@ CSequenceHeartBeat::CSequenceHeartBeat(CLEDManager *pLEDManager) :
 
     const float INTERVAL = 2.0f;
 
-    const float PULSE_1_UP_LENGTH = 0.1f;
-    const float PULSE_1_DOWN_LENGTH = 0.1f;
-    const int PULSE_1_BRIGHTNESS = 100;
-    const float PULSE_2_UP_LENGTH = 0.2f;
-    const float PULSE_2_DOWN_LENGTH = 0.2f;
-    const int PULSE_2_BRIGHTNESS = 50;
+    // Slowed transitions and reduced peak brightness to lower photosensitivity risk.
+    // Previous values: PULSE_1_UP_LENGTH = 0.1, PULSE_1_BRIGHTNESS = 100.
+    // A 0.1s rise to full brightness is an abrupt enough change to be uncomfortable;
+    // 0.3s to 70% is still clearly visible as a heartbeat but much softer.
+    const float PULSE_1_UP_LENGTH = 0.3f;
+    const float PULSE_1_DOWN_LENGTH = 0.3f;
+    const int PULSE_1_BRIGHTNESS = 70;
+    const float PULSE_2_UP_LENGTH = 0.4f;
+    const float PULSE_2_DOWN_LENGTH = 0.4f;
+    const int PULSE_2_BRIGHTNESS = 40;
 
     const float GAP_BETWEEN_PULSES = 0.25f;
 
