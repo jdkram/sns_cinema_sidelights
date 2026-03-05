@@ -24,26 +24,27 @@ CSequenceKnightRider::CSequenceKnightRider(CLEDManager *pLEDManager) :
 
     float currentTime = 0.01f;
 
-    for (int i = 0; i < 1000; i++) {
+    // A single sweep (one pass forward, one pass back). mLoopSequence = true handles
+    // repetition automatically. Previously 1000 iterations pre-baked ~94,000 events
+    // for a 2.6-hour sequence, forcing every update() frame to iterate all of them
+    // even though only ~4 are ever active -- this pegged the Pi Zero CPU continuously.
+    
+    for (int led = 1; led < LEDS; led++) {
 
-        for (int led = 1; led < LEDS; led++) {
+        fadeEventAdd(led, 100, currentTime, FADE_TIME);
+        fadeEventAdd(led, 0, currentTime + FADE_TIME, FADE_TIME);
 
-            fadeEventAdd(led, 100, currentTime, FADE_TIME);
-            fadeEventAdd(led, 0, currentTime + FADE_TIME, FADE_TIME);
-
-            currentTime += STAGGER; // next one overlaps
-        }
-
-        for (int led = LEDS; led >= 1; led--) {
-
-            fadeEventAdd(led, 100, currentTime, FADE_TIME);
-            fadeEventAdd(led, 0, currentTime + FADE_TIME, FADE_TIME);
-
-            currentTime += STAGGER; // next one overlaps
-        }
+        currentTime += STAGGER; // next one overlaps
     }
 
-    cout << "Sequence Length: " << mSequenceLengthSeconds << endl;
+    for (int led = LEDS; led >= 1; led--) {
+
+        fadeEventAdd(led, 100, currentTime, FADE_TIME);
+        fadeEventAdd(led, 0, currentTime + FADE_TIME, FADE_TIME);
+
+        currentTime += STAGGER; // next one overlaps
+    }
 
     mSequenceLengthSeconds = currentTime;
+    cout << "KnightRider sequence length: " << mSequenceLengthSeconds << "s" << endl;
 }

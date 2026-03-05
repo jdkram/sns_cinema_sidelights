@@ -24,6 +24,13 @@ CSequence::CSequence(CLEDManager *pLEDManager, bool pLoop, float pLengthSeconds)
     }
 }
 
+CSequence::~CSequence() {
+    for (vector<CEvent *>::iterator it = mEvents.begin(); it != mEvents.end(); ++it) {
+        delete *it;
+    }
+    mEvents.clear();
+}
+
 void CSequence::channelReserve(CEvent *pEvent, int pLED) {
 
     // Events reserve a channel when they begin. Later events can then override this and we only
@@ -108,7 +115,10 @@ void CSequence::start() {
 
 milliseconds CSequence::millis() {
 
-    milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+    // steady_clock is monotonic and unaffected by NTP adjustments.
+    // system_clock can jump forward or backward when NTP corrects the Pi's clock
+    // after boot (the Zero has no RTC), which would corrupt elapsed-time calculations.
+    milliseconds ms = duration_cast<milliseconds>(steady_clock::now().time_since_epoch());
 
     return ms;
 }

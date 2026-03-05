@@ -14,6 +14,7 @@ class CSequence {
 public:
 
     CSequence(CLEDManager *pLEDManager, bool pLoop = false, float pLengthSeconds = 0.0f);
+    virtual ~CSequence();
 
     void start();
 

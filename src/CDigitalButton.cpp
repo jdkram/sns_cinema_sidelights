@@ -17,7 +17,11 @@ void CDigitalButton::update() {
     int reading = digitalRead(mPin);
 
     if (reading) {
-        mConsecutiveReadings++;
+        // Cap to avoid integer overflow on long uptime with a held or stuck button.
+        // Signed overflow is undefined behaviour; any value >= threshold is equivalent.
+        if (mConsecutiveReadings <= CONSECUTIVE_READINGS_TO_TRIGGER) {
+            mConsecutiveReadings++;
+        }
     } else {
         mConsecutiveReadings = 0;
     }

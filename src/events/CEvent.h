@@ -10,6 +10,7 @@ class CEvent{
 
     public:
       CEvent(CSequence* pSequence, int pLED, int pBrightness, float pStartTimeSeconds, float pLength = 0.0f);
+      virtual ~CEvent() = default;
 
       virtual void update(float pElapsedSequenceTime) = 0;
       virtual void reset();
