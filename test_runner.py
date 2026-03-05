@@ -1,6 +1,123 @@
-# ai-input
-
 #!/usr/bin/env python3
+"""
+test_runner.py -- GPIO button hardware diagnostic and stress test
+
+WHAT IT DOES
+============
+Comprehensive hardware test suite for the 5-button control panel. Verifies GPIO
+wiring, debouncing quality, and mechanical reliability. Produces a CSV event log
+and human-readable pass/fail results for each test.
+
+Designed to catch wiring faults, stuck buttons, and noisy inputs before the
+device goes into production or when troubleshooting field failures.
+
+PREREQUISITES
+=============
+- Raspberry Pi with RPi.GPIO installed: sudo apt install python3-rpi.gpio
+- All five buttons physically connected and powered
+- User permission to access GPIO (usually pi user on Raspberry Pi OS)
+
+TEST MODES
+==========
+Five tests are available, run individually or all together (default):
+
+1. SMOKE TEST (--mode smoke)
+   Duration: ~15 seconds (customizable with --smoke-seconds)
+   Tests: "Do the buttons work at all?"
+   - Listens for any button press/release transitions
+   - Does not care which button is pressed when or which GPIO pin
+   - Passes if at least one button produces a state change
+   - Quick validation that hardware is not completely broken
+
+2. MAPPING TEST (--mode mapping)
+   Duration: ~1 minute (depends on --step-timeout)
+   Tests: "Is each physical button wired to its correct GPIO?"
+   - Prompts for each button 1-5 in sequence
+   - Detects which GPIO transitions when you press
+   - Fails if a button presses GPIO X when it should press GPIO Y
+   - Essential after any rewiring or to validate a new device
+
+3. DEBOUNCE TEST (--mode debounce)
+   Duration: ~30 seconds
+   Tests: "Does mechanical chatter cause line noise?"
+   - One fresh tap per button
+   - Counts state transitions during a single press/release cycle
+   - Expects 2-4 transitions (press down, settle, release, settle)
+   - Warns/fails if >4 transitions (indicates worn contacts or poor solder)
+
+4. HOLD TEST (--mode hold)
+   Duration: ~1 minute
+   Tests: "Can each button stay held reliably for 2 seconds?"
+   - Measures how long each button reads HIGH when you hold it
+   - Fails if button cannot sustain 1.5+ seconds (default threshold)
+   - Catches intermittent contact and wobbling mechanical connections
+
+5. ALL TESTS (--mode all, default)
+   Runs smoke, mapping, debounce, hold in sequence.
+   Total time: ~3-5 minutes depending on timeouts and user interaction.
+
+USAGE EXAMPLES
+==============
+Single-person mode (you operate buttons yourself):
+  python3 test_runner.py
+  python3 test_runner.py --mode mapping
+
+Two-person mode (operator in booth, caller on stage with a script):
+  python3 test_runner.py --two-person
+  python3 test_runner.py --mode mapping --two-person
+
+Adjust timing if you're working remotely or over a phone call:
+  python3 test_runner.py --two-person --step-timeout 30 --prep-seconds 5
+
+Generate a log with a custom filename:
+  python3 test_runner.py --log /tmp/buttons_2026-03-05.csv
+
+OUTPUT
+======
+Console: pass/fail summary and per-button details for each test.
+CSV log file: timestamped events (default: button_test_log_YYYYMMDD_HHMMSS.csv).
+             Useful for reviewing exactly when each button registered and with
+             how many transitions. Can be opened in a spreadsheet for analysis.
+
+EXIT CODE
+=========
+0 = All tests passed
+1 = At least one test failed or warned
+130 = Interrupted by Ctrl+C (cleanup still runs)
+
+TWO-PERSON MODE
+===============
+Designed for theatre/cinema environments where one person reads a script aloud
+(stage/FOH) and another operates the buttons (booth/backstage). Calls are
+repeated twice and use military call signs (ONE, TWO, THREE, FOUR, FIVE) to
+prevent misunderstanding over phone or intercom.
+
+Timing is intentionally generous (20+ second windows by default) to account for
+shout delay, phone latency, and the time needed to run to the booth.
+
+Customize with --prep-seconds (countdown before each call) and --step-timeout
+(wait window) if needed.
+
+EXAMPLE FIELD SETUP
+===================
+Goal: verify the live device's buttons still work after a repair session.
+
+1. SSH into the Pi.
+2. Run: python3 /home/pi/sidelights/test_runner.py --mode smoke
+   (Quick check: does anything work?)
+3. If smoke passes, run: python3 /home/pi/sidelights/test_runner.py --mode mapping
+   (Detailed check: is each button correctly wired?)
+4. Review results. If buttons work, the device is ready.
+5. If buttons fail mapping, check GPIO connections before redeploying.
+
+TROUBLESHOOTING NOTES
+=====================
+- Command not found / import error: pip3 install RPi.GPIO or apt install python3-rpi.gpio
+- Permission denied: Run with sudo, or add user to gpio group (sudo usermod -a -G gpio pi)
+- No press detected ever: Check pull-down resistors, power supply, and button solder joints
+- Button registers button N when you press button M: Rewiring mismatch; see BUTTON_PINS map
+- Excessive transitions (5+): Clean contacts, reflow solder, or replace worn mechanical switch
+"""
 
 import argparse
 import csv

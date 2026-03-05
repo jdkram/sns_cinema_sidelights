@@ -1,4 +1,28 @@
-import os
+"""
+check_buttons.py -- quick manual verification of button wiring
+
+Run on the Pi with:
+    python3 check_buttons.py
+
+What it does:
+  Configures GPIO 4, 17, 18, 22, 27 as inputs with internal pull-down
+  resistors, then busy-polls all five pins and prints the button number
+  (1-5) to stdout whenever a pin reads HIGH.
+
+What to look for:
+  - Each physical button should print its own number when held and nothing
+    when released.
+  - If a button never prints: the pin may be wired wrong, or the pull-down
+    resistor / signal wire may be missing.
+  - If a button always prints: the pin is floating HIGH or wired directly
+    to 3.3V with no switch in the circuit.
+
+Limitations:
+  - No debouncing: holding a button floods stdout (expected).
+  - CPU spins continuously - exit with Ctrl+C when done.
+  - No state machine: use test_runner.py for structured pass/fail testing.
+"""
+
 import RPi.GPIO as GPIO
 
 # Reset any previous GPIO state left by earlier scripts/runs.
@@ -40,14 +64,14 @@ GPIO.setup(BUTTON_5, GPIO.IN, GPIO.PUD_DOWN)
 #   - debounce mechanical button chatter
 #   - throttle output rate while a button is held
 #   - sleep between iterations (CPU spins continuously)
-while 1:
+while True:
     if GPIO.input(BUTTON_1):
-        print 1;
+        print(1)
     if GPIO.input(BUTTON_2):
-        print 2;
+        print(2)
     if GPIO.input(BUTTON_3):
-        print 3;
+        print(3)
     if GPIO.input(BUTTON_4):
-        print 4;
+        print(4)
     if GPIO.input(BUTTON_5):
-        print 5;
+        print(5)
