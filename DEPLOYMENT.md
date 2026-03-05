@@ -53,8 +53,6 @@ Note the path that exists. The commands below assume `/home/pi/sidelights/main`.
    sudo tee /etc/systemd/system/sns-sidelights.service > /dev/null << 'EOF'
    [Unit]
    Description=Star and Shadow sidelight controller
-   After=network-online.target
-   Wants=network-online.target
 
    [Service]
    Type=simple
@@ -101,6 +99,67 @@ Note the path that exists. The commands below assume `/home/pi/sidelights/main`.
 
 The key improvement over rc.local: if `main` crashes for any reason, systemd will restart it automatically within 5 seconds, and the failure will appear in `journalctl` rather than disappearing silently.
 
+## Deploying updates to a live device
+
+All commands run over SSH from your development machine.
+
+1. Push your changes to git on your dev machine, then on the Pi:
+
+   ```bash
+   ssh pi@<pi-ip>
+   cd /home/pi/sidelights
+   git pull
+   ```
+
+   If the repo isn't on the Pi as a git clone (i.e. the binary was copied manually), copy the changed source files instead:
+
+   ```bash
+   scp -r src/ pi@<pi-ip>:/home/pi/sidelights/src/
+   ```
+
+2. Rebuild on the Pi:
+
+   ```bash
+   cmake .
+   make -j2
+   ```
+
+   The Pi Zero is slow -- `make` will take a few minutes. `-j2` uses both threads without thrashing memory.
+
+3. Restart the service:
+
+   ```bash
+   sudo systemctl restart sns-sidelights.service
+   ```
+
+4. Confirm it came back up:
+
+   ```bash
+   sudo systemctl status sns-sidelights.service
+   journalctl -u sns-sidelights.service -n 20
+   ```
+
+## Cross-compilation
+
+You can cross-compile, but it is more work than it is probably worth here.
+
+**The obstacle:** the project depends on `wiringPi`, which is a Pi-specific library with no package available for standard cross-toolchains. You would need to either compile wiringPi from source targeting ARM, or tell CMake where to find pre-built ARM headers and libraries. That is non-trivial to set up once and fragile to maintain.
+
+**The practical options in ascending order of effort:**
+
+| Option | How | Tradeoff |
+|---|---|---|
+| Build on the Pi Zero | SSH in, `cmake . && make -j2` | Slow (~2 min) but zero setup |
+| Build on a Pi 4 running 32-bit Pi OS | Same commands, copy binary across | Fast compile; binary runs on Zero if both on Bookworm 32-bit |
+| Cross-compile on your dev machine | Install `arm-linux-gnueabihf` toolchain, manually supply wiringPi headers/libs | Fast but fragile; skip unless you're deploying frequently |
+
+**Copying a Pi 4 binary to the Pi Zero** is the best middle ground if you have access to a Pi 4: both devices run the same Raspberry Pi OS 32-bit (armhf), so a binary built on a Pi 4 will run on the Zero without any cross-toolchain setup. It will also link correctly against the same `wiringPi` library version because you are building in the real target environment. After building on the Pi 4:
+
+```bash
+scp /home/pi/sidelights/main pi@<zero-ip>:/home/pi/sidelights/main
+ssh pi@<zero-ip> sudo systemctl restart sns-sidelights.service
+```
+
 ## Reliability checklist
 
 - use high-endurance microSD cards
@@ -112,10 +171,40 @@ The key improvement over rc.local: if `main` crashes for any reason, systemd wil
 
 For connectivity risk decisions and update policy, see `OPERATIONS.md`.
 
+## Persistent logging
+
+By default, systemd logs are lost on reboot. To keep logs across restarts (useful for debugging historical problems):
+
+```bash
+sudo mkdir -p /var/log/journal
+sudo systemctl restart systemd-journald
+```
+
+This will result in more writes to the microSD, but only when something happens (e.g. button press, state change, service restart). It's worth enabling this, at least while we figure out what's going wrong with the device.
+
+Then query historical logs:
+
+```bash
+# Last hour
+journalctl -u sns-sidelights.service --since "1 hour ago"
+
+# Specific date range
+journalctl -u sns-sidelights.service --since "2026-03-02" --until "2026-03-03"
+
+# Specific time window
+journalctl -u sns-sidelights.service --since "2026-03-02 14:30:00" --until "2026-03-02 15:00:00"
+
+# Most recent entries first
+journalctl -u sns-sidelights.service -r -n 50
+```
+
+Logs are capped at 10% of `/var` by default (fine for the Pi's storage).
+
 ## Troubleshooting quick checks
 
 - `i2cdetect -y 1` should show expected PCA9685 addresses (commonly `0x40` and `0x60`)
-- verify button input path with `python test.py` (if present)
+  - If command not found: `sudo apt install i2c-tools`
+- verify button input path with `python3 check_buttons.py`
 - view logs with `journalctl -u sns-sidelights.service -f`
 
 Before changing architecture/refactoring behaviour, complete `BASELINE_SIGNOFF.md` on the target Pi.
