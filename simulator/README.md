@@ -57,7 +57,7 @@ with the cinema screen in the middle.
 
 ### Interactive switching
 
-While a sequence is playing, press **1, 2, 3, 4, or 5** on your keyboard to
+While a sequence is playing, press **1, 2, 3 etc.** on your keyboard to
 instantly jump to that button's sequence. No need to Ctrl+C and restart. This
 is useful for testing transitions or comparing how different patterns look.
 

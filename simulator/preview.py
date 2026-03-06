@@ -86,7 +86,8 @@ def _render_frame(state: list[float], seq_name: str, elapsed: float, first: bool
     mins = int(elapsed) // 60
     secs = int(elapsed) % 60
     rows.append(f"Sequence: {seq_name:<12s}  Elapsed: {mins}:{secs:02d}")
-    rows.append("Press 1-5 to switch sequence, or Ctrl+C to quit")
+    max_button = max(BUTTON_MAP.keys()) if BUTTON_MAP else 5
+    rows.append(f"Press 1-{max_button} to switch sequence, or Ctrl+C to quit")
 
     if not first:
         # Move up N lines and return to column 0.
@@ -148,10 +149,33 @@ def run(initial_seq_name: str, fps: int = 30) -> None:
     seq.start()
     frame_interval = 1.0 / fps
     first = True
+    input_buffer = ""
+    last_input_time = None
+    input_timeout = 0.5  # seconds before executing buffered input
 
     try:
         while True:
             frame_start = time.monotonic()
+            
+            # Check for timeout on buffered input
+            if input_buffer and last_input_time:
+                if time.monotonic() - last_input_time > input_timeout:
+                    try:
+                        button_num = int(input_buffer)
+                        if button_num in BUTTON_MAP:
+                            new_seq_name = BUTTON_MAP[button_num]
+                            if new_seq_name != seq_name:
+                                seq_name = new_seq_name
+                                led_manager.reset_all()
+                                seq_class = SEQUENCES[seq_name]
+                                seq = seq_class(led_manager)
+                                seq.start()
+                                first = True
+                    except ValueError:
+                        pass
+                    input_buffer = ""
+                    last_input_time = None
+            
             seq.update()
             _render_frame(led_manager.state(), seq_name, seq.elapsed_seconds(), first)
             first = False
@@ -163,16 +187,37 @@ def run(initial_seq_name: str, fps: int = 30) -> None:
                     break
                 if key == '\x03':  # Ctrl+C
                     raise KeyboardInterrupt
-                if key in '12345':
-                    new_seq_name = BUTTON_MAP.get(int(key))
-                    if new_seq_name and new_seq_name != seq_name:
-                        seq_name = new_seq_name
-                        led_manager.reset_all()
-                        seq_class = SEQUENCES[seq_name]
-                        seq = seq_class(led_manager)
-                        seq.start()
-                        first = True
-                        break
+                if key.isdigit():
+                    input_buffer += key
+                    last_input_time = time.monotonic()
+                    button_num = int(input_buffer)
+                    
+                    # Check if this button exists
+                    if button_num in BUTTON_MAP:
+                        # Check if any valid button in BUTTON_MAP could start with (button_num * 10)
+                        # i.e., is there a button in [button_num * 10, button_num * 10 + 9]?
+                        has_continuation = any(
+                            button_num * 10 <= b < button_num * 10 + 10
+                            for b in BUTTON_MAP.keys()
+                        )
+                        
+                        if not has_continuation:
+                            # No valid continuation, execute immediately
+                            new_seq_name = BUTTON_MAP[button_num]
+                            if new_seq_name != seq_name:
+                                seq_name = new_seq_name
+                                led_manager.reset_all()
+                                seq_class = SEQUENCES[seq_name]
+                                seq = seq_class(led_manager)
+                                seq.start()
+                                first = True
+                            input_buffer = ""
+                            last_input_time = None
+                            break
+                    else:
+                        # Invalid button, clear buffer and discard
+                        input_buffer = ""
+                        last_input_time = None
 
             elapsed = time.monotonic() - frame_start
             sleep = frame_interval - elapsed
