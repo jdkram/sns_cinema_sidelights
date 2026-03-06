@@ -139,6 +139,70 @@ All commands run over SSH from your development machine.
    journalctl -u sns-sidelights.service -n 20
    ```
 
+## Remapping buttons and rebuild rules
+
+### Button map
+
+The mapping between physical buttons and sequences lives in a single array at the top of `src/main.cpp`:
+
+```cpp
+static const int BUTTON_SEQUENCE_MAP[] = {1, 2, 3, 4, 5};
+//                                         ^  ^  ^  ^  ^
+//                                   btn 1  2  3  4  5
+```
+
+The index is zero-based (index 0 = button 1). The value is the 1-based sequence slot from `CSequenceManager.cpp`. Current slots:
+
+| Slot | Sequence |
+|------|----------|
+| 1 | Ambient |
+| 2 | FadeOutSimple |
+| 3 | HeartBeat |
+| 4 | FadeInSparkle |
+| 5 | KnightRider |
+| 6 | Ember |
+| 7 | Breathing478 |
+
+To try Ember on button 4 during a show: change index 3 to `6`, then rebuild. To revert completely to the original five: restore `{1, 2, 3, 4, 5}`.
+
+On startup the binary prints the current button map to stdout (visible via `journalctl -u sns-sidelights.service -n 30`). Use this to confirm your remap took effect without needing to press anything.
+
+### Do I need to re-run cmake?
+
+| What changed | Command needed |
+|---|---|
+| Only `.cpp` / `.h` content (e.g. button remap, constant tweak) | `make -j2` is enough |
+| `CMakeLists.txt` changed (new files added) | `cmake . && make -j2` |
+| First build on a fresh clone or build directory | `cmake . && make -j2` |
+
+Button remapping only touches `src/main.cpp`, so on the Pi you only need `make -j2`.
+
+### Quick remap workflow on a live Pi
+
+```bash
+ssh pi@<pi-ip>
+cd /home/pi/sidelights
+git pull                        # or edit src/main.cpp directly
+make -j2                        # no cmake needed for button remaps
+sudo systemctl restart sns-sidelights.service
+sudo systemctl status sns-sidelights.service
+journalctl -u sns-sidelights.service -n 30   # check printed button map
+```
+
+### CLI sequence trigger (for on-site testing)
+
+You can start any sequence immediately from the command line without pressing a button. Buttons still work while it is running:
+
+```bash
+./main 6         # start Ember immediately
+./main 7         # start Breathing478 immediately
+./main --help    # list all available sequences and current button map
+```
+
+This is useful for checking a specific sequence works before a show, without reaching for the button box.
+
+---
+
 ## Cross-compilation
 
 You can cross-compile, but it is more work than it is probably worth here.

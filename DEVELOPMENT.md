@@ -26,11 +26,17 @@ Current button mapping is created in `CSequenceManager` constructor order.
 
 Current mapping in this snapshot:
 
-1. Button 1 -> `CSequenceAmbient`
-2. Button 2 -> `CSequenceFadeOutSimple`
-3. Button 3 -> `CSequenceHeartBeat`
-4. Button 4 -> `CSequenceFadeInSparkle`
-5. Button 5 -> `CSequenceKnightRider`
+| Button | Sequence | Slot |
+|--------|----------|------|
+| 1 | `CSequenceAmbient` | 1 |
+| 2 | `CSequenceFadeOutSimple` | 2 |
+| 3 | `CSequenceHeartBeat` | 3 |
+| 4 | `CSequenceFadeInSparkle` | 4 |
+| 5 | `CSequenceKnightRider` | 5 |
+| — | `CSequenceEmber` | 6 |
+| — | `CSequenceBreathing478` | 7 |
+
+Slots 6 and 7 exist in the binary but are not currently assigned to a physical button. To assign them, edit `BUTTON_SEQUENCE_MAP` in `src/main.cpp` -- no cmake needed, just `make -j2`. See DEPLOYMENT.md for the full remap workflow.
 
 ## Make a small change (easiest path)
 
