@@ -201,6 +201,22 @@ You can start any sequence immediately from the command line without pressing a 
 
 This is useful for checking a specific sequence works before a show, without reaching for the button box.
 
+**Important:** the CLI args are start-up arguments for a new process. If the systemd service is already running, do not run `./main` directly alongside it -- two processes sharing the same I2C bus will corrupt output or crash.
+
+Always stop the service first:
+
+```bash
+sudo systemctl stop sns-sidelights.service   # stops the running process
+./main 6                                      # run manually, Ctrl+C when done
+sudo systemctl start sns-sidelights.service  # bring it back
+```
+
+`stop` does not disable the service -- it will still restart automatically on the next reboot. To check whether the service is running before you touch anything:
+
+```bash
+sudo systemctl status sns-sidelights.service
+```
+
 ---
 
 ## Cross-compilation

@@ -101,6 +101,52 @@ Then schedule a monthly maintenance reboot + verification.
 - can break GPIO/I2C stack unexpectedly
 - avoid unless you have strong monitoring and rollback automation
 
+## Nightly reboot as a stability measure
+
+A scheduled 4am reboot is a reasonable pragmatic measure while long-term stability of the device is still being established. It clears any memory drift, unblocks I2C if a transient lock-up occurred overnight, and the service restarts automatically on boot.
+
+### Tradeoffs
+
+| Pro | Con |
+|-----|-----|
+| Clears accumulated state and I2C drift | ~30–40 s outage at 4am (service startup delay included) |
+| Simple and reliable, no monitoring required | Random-seed sequences (Ember, Ambient) get a different pattern after each reboot -- benign but worth knowing |
+| Cheaper than investigating root-cause stability under time pressure | If the venue is occupied at 4am, lights will cut briefly |
+
+Overall: worth doing as a stopgap. If the device proves stable over several weeks, you can remove it.
+
+### Setting up the cron job
+
+On the Pi, run:
+
+```bash
+sudo crontab -e
+```
+
+Add this line at the bottom:
+
+```
+0 4 * * * /sbin/reboot
+```
+
+Save and exit. Verify it was saved:
+
+```bash
+sudo crontab -l
+```
+
+The `sudo crontab` (root's crontab) is used rather than the `pi` user's crontab because `reboot` requires root. The service will come back up automatically via systemd after the reboot.
+
+### Removing the cron job later
+
+When you are satisfied with long-term stability:
+
+```bash
+sudo crontab -e   # delete or comment out the reboot line
+```
+
+---
+
 ## Monthly maintenance checklist (managed online mode)
 
 1. `sudo apt update && apt list --upgradable`
