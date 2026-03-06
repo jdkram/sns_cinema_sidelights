@@ -1,4 +1,4 @@
-# ai-input
+# author: Jonny Kram; ai-model: Claude Haiku; status: "#ai-input"
 """
 sequences.py -- Python ports of all five light sequences
 

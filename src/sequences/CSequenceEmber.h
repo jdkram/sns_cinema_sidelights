@@ -1,6 +1,6 @@
-// ai-input
 #ifndef CSEQUENCEEMBER_H
 #define CSEQUENCEEMBER_H
+// author: Jonny Kram; ai-model: Claude Haiku; status: "#ai-input"
 
 #include "CSequence.h"
 #include "../CLEDManager.h"

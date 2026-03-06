@@ -29,6 +29,10 @@ CSequenceKnightRider::CSequenceKnightRider(CLEDManager *pLEDManager) :
     // for a 2.6-hour sequence, forcing every update() frame to iterate all of them
     // even though only ~4 are ever active -- this pegged the Pi Zero CPU continuously.
     
+    // Jonny: this just doesn't work on the live hardware now. No clue if due to my edits,
+    // as it was also broken when I first pulled the code. Suspect something going on with
+    // speed and PWM - lights don't have enough time to power on?
+    
     for (int led = 1; led < LEDS; led++) {
 
         fadeEventAdd(led, 100, currentTime, FADE_TIME);

@@ -1,4 +1,4 @@
-// ai-input
+// author: Jonny Kram; ai-model: Claude Haiku; status: "#ai-input"
 #include "CSequenceEmber.h"
 
 #include <cstdlib>

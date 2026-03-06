@@ -1,4 +1,4 @@
-# ai-input
+# author: Jonny Kram; ai-model: Claude Haiku; status: "#ai-input"
 """
 record_sequences.py -- Generate asciinema recordings of all sequences
 

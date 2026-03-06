@@ -1,4 +1,7 @@
-`#ai-input`
+---
+human-authors: Jonny Kram
+ai-authors: ["Claude Haiku"]
+---
 
 # Star and Shadow sidelight controller
 

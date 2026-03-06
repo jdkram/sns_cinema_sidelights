@@ -1,4 +1,4 @@
-// ai-input
+// author: Paul?, Jonny Kram; ai-model: Claude Haiku; status: "#ai-input"
 #include <iostream>
 #include <vector>
 #include <wiringPi.h>

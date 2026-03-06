@@ -1,4 +1,7 @@
-`#ai-input`
+---
+human-authors: Jonny Kram
+ai-authors: ["Claude Haiku"]
+---
 
 # Deployment (public)
 
@@ -114,7 +117,7 @@ All commands run over SSH from your development machine.
    If the repo isn't on the Pi as a git clone (i.e. the binary was copied manually), copy the changed source files instead:
 
    ```bash
-   scp -r src/ pi@<pi-ip>:/home/pi/sidelights/src/
+   rsync -av code/sns_cinema_sidelights pi@raspberrypi.local:/home/pi/sidelights
    ```
 
 2. Rebuild on the Pi:

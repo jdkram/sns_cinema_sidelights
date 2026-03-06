@@ -1,4 +1,4 @@
-// ai-input
+// author: Paul?
 #include "CSequenceManager.h"
 
 #include <iostream>

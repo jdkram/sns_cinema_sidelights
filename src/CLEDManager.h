@@ -1,5 +1,6 @@
 #ifndef ARDUINO_CLEDMANAGER_H
 #define ARDUINO_CLEDMANAGER_H
+// author: Paul?
 
 #include <vector>
 

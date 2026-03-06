@@ -1,6 +1,7 @@
 #include "sequences/CSequence.h"
 #include <vector>
 #include "CLEDManager.h"
+// author: Paul?
 
 class CSequenceManager{
 

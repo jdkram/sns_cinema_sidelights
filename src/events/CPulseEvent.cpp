@@ -1,3 +1,4 @@
+// author: Jonny Kram; ai-model: Claude Haiku; status: "#ai-input"
 #include "CPulseEvent.h"
 
 #include <iostream>

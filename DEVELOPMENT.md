@@ -1,4 +1,7 @@
-`#ai-input`
+---
+human-authors: Jonny Kram
+ai-authors: ["Claude Haiku"]
+---
 
 # Development guide: adding or changing light patterns
 

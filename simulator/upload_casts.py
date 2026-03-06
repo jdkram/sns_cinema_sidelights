@@ -1,4 +1,4 @@
-# ai-input
+# author: Jonny Kram; ai-model: Claude Haiku; status: "#ai-input"
 """
 upload_casts.py -- Upload all .cast files in ./simulator/recordings to asciinema.org
 

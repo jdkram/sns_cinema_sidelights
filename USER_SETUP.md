@@ -1,4 +1,7 @@
-`#ai-input`
+---
+human-authors: Jonny Kram
+ai-authors: ["Claude Sonnet"]
+---
 
 # First-time setup guide (non-technical)
 
@@ -11,7 +14,7 @@ Current behaviour of the 5 physical buttons:
 1. **Button 1**: Ambient (slow random fades)
 2. **Button 2**: Fade out (all lights gradually off)
 3. **Button 3**: Heartbeat (double pulse loop)
-4. **Button 4**: Fade-in sparkle (sparkles then reaches full brightness)
+4. **Button 4**: Fade-in sparkle (sparkles then reaches full brightness, slow 60 second build up)
 5. **Button 5**: Knight Rider sweep (back-and-forth moving light)
 
 If the observed behaviour does not match this list, ask a maintainer whether a newer pattern version has been deployed.
@@ -172,7 +175,7 @@ Run on the Pi over SSH:
 
 ```bash
 sudo apt update
-sudo apt install -y build-essential cmake i2c-tools git
+sudo apt install -y build-essential cmake i2c-tools git python3-rpi.gpio
 ```
 
 ## Part 5, copy code to Pi
@@ -262,10 +265,10 @@ journalctl -u sns-sidelights.service -f
 - Button input test (optional):
 
 ```bash
-python test.py
+python3 check_buttons.py
 ```
 
-Press each button and confirm numbers print.
+Press each button and confirm its number prints. See `check_buttons.py` for what to look for.
 
 ## Practical reliability tips
 
@@ -283,3 +286,71 @@ sudo shutdown -h now
 
 - Do not commit credentials to GitHub.
 - Share current operational credentials directly with authorised cinema maintainers.
+
+---
+
+## Field checklist (print this out)
+
+For use in the cinema, offline. Work through the relevant section.
+
+### A. Fresh Pi from scratch
+
+- [ ] Flash Raspberry Pi OS Lite to microSD (use Raspberry Pi Imager on KUSANAGI)
+- [ ] Set hostname, SSH, username, password, and hotspot Wi-Fi in Imager advanced settings
+- [ ] Boot Pi, wait 2-3 minutes, find IP on phone hotspot client list
+- [ ] SSH in: `ssh pi@<ip>`
+- [ ] Install dependencies:
+  ```bash
+  sudo apt update
+  sudo apt install -y build-essential cmake i2c-tools git python3-rpi.gpio
+  ```
+- [ ] Copy code to Pi (from laptop): `scp -r sns_cinema_sidelights pi@<ip>:/home/pi/sidelights`
+- [ ] Build:
+  ```bash
+  cd /home/pi/sidelights && cmake . && make -j2
+  ```
+- [ ] Run manually and test buttons: `./main`
+  Expected: buttons 1-5 each trigger a visible light change (see button map at top)
+- [ ] Stop with `Ctrl+C`, install as service:
+  ```bash
+  sudo cp config/systemd/sns-sidelights.service /etc/systemd/system/
+  sudo systemctl daemon-reload
+  sudo systemctl enable sns-sidelights.service
+  sudo systemctl start sns-sidelights.service
+  ```
+- [ ] Reboot and confirm auto-start: `sudo reboot`, then `systemctl status sns-sidelights.service`
+
+### B. Modifying the live device
+
+- [ ] SSH in: `ssh pi@<ip>` (or `ssh pi@sns-sidelights.local`)
+- [ ] Stop the service: `sudo systemctl stop sns-sidelights.service`
+- [ ] Make your changes (edit code, copy files, rebuild, etc.)
+- [ ] Rebuild if code changed:
+  ```bash
+  cd /home/pi/sidelights && make -j2
+  ```
+- [ ] Test manually: `./main` -- press buttons and check behaviour
+- [ ] Stop with `Ctrl+C`, restart service: `sudo systemctl start sns-sidelights.service`
+- [ ] Check it is running: `systemctl status sns-sidelights.service`
+
+### C. Diagnosing problems
+
+- [ ] Check I2C boards are visible (expect addresses `0x40` and `0x60`):
+  ```bash
+  i2cdetect -y 1
+  ```
+- [ ] Check service logs for errors:
+  ```bash
+  journalctl -u sns-sidelights.service -n 50
+  ```
+- [ ] Verify button wiring independently (no LED hardware needed):
+  ```bash
+  python3 /home/pi/sidelights/check_buttons.py
+  ```
+  Press each button -- its number (1-5) should print. Nothing = wrong GPIO pin or wiring. Always-printing = floating input.
+- [ ] Expected button behaviour (see full map at top of this file):
+  - Button 1: slow random fades (should start within 1-2 seconds)
+  - Button 2: gradual fade to black over 10 seconds (may look like nothing if lights already off)
+  - Button 3: rapid double-pulse heartbeat (immediately visible)
+  - Button 4: sparkle build-up -- **wait 30-60 seconds**, starts dark
+  - Button 5: Knight Rider sweep across all LEDs (should start within 1 second)

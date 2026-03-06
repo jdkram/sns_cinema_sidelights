@@ -1,4 +1,4 @@
-# ai-input
+# author: Jonny Kram; ai-model: Claude Haiku; status: "#ai-input"
 """
 preview.py -- terminal renderer for light sequence simulation
 

@@ -1,4 +1,4 @@
-// ai-input
+// author: Jonny Kram; ai-model: Claude Haiku; status: "#ai-input"
 #include "CSequenceBreathing478.h"
 
 // Port of simulator/sequences.py :: SequenceBreathing478

@@ -1,4 +1,3 @@
-# ai-input
 [Unit]
 Description=Star and Shadow sidelight controller
 
@@ -6,7 +5,7 @@ Description=Star and Shadow sidelight controller
 Type=simple
 User=pi
 WorkingDirectory=/home/pi/sidelights
-ExecStartPre=/bin/sleep 30
+ExecStartPre=sleep 30
 ExecStart=/home/pi/sidelights/main
 Restart=always
 RestartSec=5

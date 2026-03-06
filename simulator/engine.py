@@ -1,4 +1,4 @@
-# ai-input
+# author: Jonny Kram; ai-model: Claude Haiku; status: "#ai-input"
 """
 engine.py -- Python port of the C++ sequence engine
 

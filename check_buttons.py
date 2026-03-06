@@ -1,3 +1,4 @@
+# author: Jonny Kram; ai-model: Claude Haiku; status: "#ai-input"
 """
 check_buttons.py -- quick manual verification of button wiring
 
