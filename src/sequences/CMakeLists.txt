@@ -5,4 +5,6 @@ list(APPEND SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/CSequenceFadeOutSimple.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/CSequenceAmbient.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/CSequenceKnightRider.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/CSequenceEmber.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/CSequenceBreathing478.cpp"
         )
