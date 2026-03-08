@@ -11,3 +11,7 @@ main
 .DS_Store
 *.swp
 simulator/__pycache__/
+
+# Generated print assets
+*.odt
+qr_github_repo.png

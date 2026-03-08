@@ -30,7 +30,8 @@ Copy `config/systemd/sns-sidelights.service` to `/etc/systemd/system/` and run:
 - `sudo systemctl start sns-sidelights.service`
 - `sudo systemctl status sns-sidelights.service`
 
-## Migrating a live device from rc.local to systemd
+<details>
+<summary>Migrating a live device from rc.local to systemd (completed 2026-03)</summary>
 
 Use this if the device is currently running `main` via `/etc/rc.local` (the original deployment method) and you want to switch to the managed systemd service without re-flashing. All commands run over SSH -- nothing from this repo needs to be present on the device.
 
@@ -102,6 +103,8 @@ Note the path that exists. The commands below assume `/home/pi/sidelights/main`.
 
 The key improvement over rc.local: if `main` crashes for any reason, systemd will restart it automatically within 5 seconds, and the failure will appear in `journalctl` rather than disappearing silently.
 
+</details>
+
 ## Deploying updates to a live device
 
 All commands run over SSH from your development machine.
@@ -117,7 +120,7 @@ All commands run over SSH from your development machine.
    If the repo isn't on the Pi as a git clone (i.e. the binary was copied manually), copy the changed source files instead:
 
    ```bash
-   rsync -av code/sns_cinema_sidelights pi@raspberrypi.local:/home/pi/sidelights
+   rsync -av --exclude=simulator/ --exclude=sessions/ code/sns_cinema_sidelights pi@raspberrypi.local:/home/pi/sidelights
    ```
 
 2. Rebuild on the Pi:

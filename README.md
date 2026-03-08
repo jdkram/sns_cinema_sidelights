@@ -9,6 +9,20 @@ Repository status: this is the active public development repository for the side
 
 Public code for a Raspberry Pi based sidelight controller used at Star and Shadow cinema.
 
+## Where to find things
+
+This project has two sources of information that complement each other.
+
+**This repository (GitHub):** all code, technical documentation, session checklists, and deployment guides. The authoritative source for anything software-related. Public.
+
+**Star and Shadow Nextcloud:** hardware photos and videos (the Pi, controller box, breadboard layout), older notes from before this repo existed, and the induction materials for new volunteers. Also contains a link back here. Access requires an S&S volunteer account.
+
+If you are a volunteer trying to understand or work on this system, start with the Nextcloud folder to see what the hardware looks like, then come here for how it works and how to change things.
+
+If you are looking at this repo cold with no Nextcloud access, the [USER_SETUP.md](USER_SETUP.md) and [DEPLOYMENT.md](DEPLOYMENT.md) docs cover what you need to get started.
+
+---
+
 ## New install? Start here
 
 To set things up from scratch, go to [USER_SETUP.md](USER_SETUP.md).
@@ -117,6 +131,12 @@ Current code maps buttons to sequences in this order:
 
 If this mapping changes in code, update docs in the same commit.
 
+## On-site session checklists
+
+For in-situ hardware sessions at the cinema, see the [sessions/](sessions/) directory.
+
+Each session file is a self-contained checklist covering: connect, deploy, verify, and experiment. Start with [sessions/TEMPLATE.md](sessions/TEMPLATE.md) to create a new session.
+
 ## Deployment
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for service setup and reliability guidance.
@@ -128,6 +148,32 @@ For network policy, hardening, and update automation choices, see [OPERATIONS.md
 For adding/changing lighting patterns safely, see [DEVELOPMENT.md](DEVELOPMENT.md).
 
 Before major refactors, run and complete [BASELINE_SIGNOFF.md](BASELINE_SIGNOFF.md).
+
+## In case of emergency
+
+If the lights are misbehaving during a screening and need to be killed remotely:
+
+```bash
+# 1. Stop the running service (required before running ./main directly)
+sudo systemctl stop sns-sidelights.service
+
+# 2. Fade everything to off gracefully
+cd /home/pi/sidelights
+./main 2
+
+# 3. Once lights are off (a few seconds), Ctrl+C to exit
+# The PCA9685 holds its last values, so lights stay off
+```
+
+Do not skip step 1. Running `./main` while the service is still up causes two processes to share the I2C bus, which corrupts output or crashes both.
+
+If SSH is unreachable (no network, controller crashed hard), the physical option is to cut power to the LED strips directly -- see [FOR_PROJECTIONISTS.md](FOR_PROJECTIONISTS.md) for the location of the power strips above the screen.
+
+To bring the lights back up after a remote kill:
+
+```bash
+sudo systemctl start sns-sidelights.service
+```
 
 ## Security and operations
 

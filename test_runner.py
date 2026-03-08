@@ -120,6 +120,8 @@ TROUBLESHOOTING NOTES
 - Excessive transitions (5+): Clean contacts, reflow solder, or replace worn mechanical switch
 """
 
+from __future__ import annotations
+
 import argparse
 import csv
 import sys

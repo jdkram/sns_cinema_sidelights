@@ -491,31 +491,39 @@ class SequenceCountdown(Sequence):
 
 class SequenceBlockTower(Sequence):
     """
-    Columns fill from the top, one at a time, stacking up like Tetris blocks.
-    Each column fills to the bottom, then the next column starts.
-    When all columns are filled, the sequence loops and clears.
+    Rows sweep in horizontally from top to bottom, stacking like floors.
+    Once all rows are lit, columns clear one at a time left to right,
+    like a building coming down floor by floor.
+
+    Button: 13
     """
     def __init__(self, led_manager: LEDManager) -> None:
         super().__init__(led_manager, loop=True)
-        num_leds = 24
         num_cols = 6
         num_rows = 4
         leds_per_col = num_rows
-        fill_time = 0.2  # seconds per block
-        clear_time = 0.5
+        fill_time = 0.3   # seconds per row
+        hold_time = 1.0   # pause at full before clearing
+        clear_time = 0.4  # seconds per column
         current_time = 0.0
-        # Fill columns left to right
-        for col in range(num_cols):
-            for row in range(num_rows):
+
+        # Fill rows horizontally (top to bottom)
+        for row in range(num_rows):
+            for col in range(num_cols):
                 led = col * leds_per_col + row + 1
                 self.brightness_set_event_add(led, 100, current_time)
-                current_time += fill_time
-        # Hold, then clear all
+            current_time += fill_time
+
+        # Hold at full brightness
+        current_time += hold_time
+
+        # Clear columns vertically (left to right)
         for col in range(num_cols):
             for row in range(num_rows):
                 led = col * leds_per_col + row + 1
                 self.brightness_set_event_add(led, 0, current_time)
             current_time += clear_time
+
         self._length_seconds = current_time
 
 # ---------------------------------------------------------------------------
@@ -583,6 +591,139 @@ class SequenceColumnsRows(Sequence):
 
 
 # ---------------------------------------------------------------------------
+# Sequence 16: Dim On
+# ---------------------------------------------------------------------------
+
+class SequenceDimOn(Sequence):
+    """
+    All 24 LEDs held at a steady low brightness. No movement, no pulse.
+
+    A simple "house lights at low" state. Useful as a holding pattern
+    between films, or for anyone who finds the other sequences too distracting.
+
+    Button: 16
+    """
+
+    BRIGHTNESS = 22  # percent -- warm and visible but not glaring
+
+    def __init__(self, led_manager: LEDManager) -> None:
+        super().__init__(led_manager, loop=False)
+        self.brightness_set_event_add_all_leds(self.BRIGHTNESS, 0.0)
+
+
+# ---------------------------------------------------------------------------
+# Sequence 17: Slow Glow
+# ---------------------------------------------------------------------------
+
+class SequenceSlowGlow(Sequence):
+    """
+    Extremely gentle, unhurried ambience. Each LED drifts independently
+    through a very narrow low-brightness range on a long, slow schedule.
+
+    For people who find the other sequences too flickery or distracting.
+    Transitions take 10-25 seconds each -- almost imperceptible moment-to-moment,
+    but alive over longer periods. Generates 10 minutes before looping.
+
+    Button: 17
+    """
+
+    MIN_BRIGHTNESS = 8
+    MAX_BRIGHTNESS = 22
+    MIN_FADE = 10.0
+    MAX_FADE = 25.0
+    TOTAL_SECONDS = 600.0
+
+    def __init__(self, led_manager: LEDManager) -> None:
+        super().__init__(led_manager, loop=True, length_seconds=self.TOTAL_SECONDS)
+
+        fade_range = self.MAX_FADE - self.MIN_FADE
+
+        for led in range(1, 25):
+            t = self.random_fraction() * self.MAX_FADE
+            while t < self.TOTAL_SECONDS:
+                brightness = random.randint(self.MIN_BRIGHTNESS, self.MAX_BRIGHTNESS)
+                fade_time = self.MIN_FADE + self.random_fraction() * fade_range
+                self.fade_event_add(led, brightness, t, fade_time)
+                t += fade_time
+
+
+# ---------------------------------------------------------------------------
+# Sequence 18: Bass Wub
+# ---------------------------------------------------------------------------
+
+class SequenceBassWub(Sequence):
+    """
+    Simulates a musical build: rapid dim flashes at the start, gradually
+    slowing and brightening into heavy, punchy flashes.
+
+    Loosely models the shape of a club music drop -- quick stutters
+    giving way to slow, weighty beats. Loops the full build every ~20 seconds.
+
+    Button: 18
+    """
+
+    # (phase_duration_s, interval_s, brightness_pct, flash_hold_s)
+    PHASES = [
+        (4.0, 0.10, 22, 0.05),   # rapid dim stutter
+        (3.0, 0.18, 38, 0.08),
+        (3.0, 0.30, 55, 0.12),
+        (3.0, 0.60, 72, 0.25),
+        (3.0, 1.10, 88, 0.45),
+        (4.0, 2.00, 100, 0.75),  # slow heavy thud
+    ]
+
+    def __init__(self, led_manager: LEDManager) -> None:
+        super().__init__(led_manager, loop=True)
+
+        self.brightness_set_event_add_all_leds(0, 0.0)
+        current_time = 0.0
+
+        for phase_duration, interval, brightness, flash_hold in self.PHASES:
+            phase_end = current_time + phase_duration
+            t = current_time
+            while t < phase_end:
+                self.brightness_set_event_add_all_leds(brightness, t)
+                self.brightness_set_event_add_all_leds(0, t + flash_hold)
+                t += interval
+            current_time = phase_end
+
+        self._length_seconds = current_time
+
+
+# ---------------------------------------------------------------------------
+# Sequence 19: Rave
+# ---------------------------------------------------------------------------
+
+class SequenceRave(Sequence):
+    """
+    Fast, sporadic individual LED flashing for loud/energetic music events.
+
+    Random subsets of LEDs strobe independently at varying speeds.
+    Short 4-second loop pre-baked at startup -- each run of the sequence
+    plays the same loop, but it feels unpredictable in context.
+
+    Button: 19
+    """
+
+    TOTAL_SECONDS = 4.0
+
+    def __init__(self, led_manager: LEDManager) -> None:
+        super().__init__(led_manager, loop=True, length_seconds=self.TOTAL_SECONDS)
+
+        self.brightness_set_event_add_all_leds(0, 0.0)
+
+        t = 0.01
+        while t < self.TOTAL_SECONDS:
+            num_on = random.randint(4, 14)
+            leds_on = random.sample(range(1, 25), num_on)
+            hold = 0.03 + self.random_fraction() * 0.07
+            for led in leds_on:
+                self.brightness_set_event_add(led, 100, t)
+                self.brightness_set_event_add(led, 0, t + hold)
+            t += 0.05 + self.random_fraction() * 0.09
+
+
+# ---------------------------------------------------------------------------
 # Registry -- add new sequences here
 # ---------------------------------------------------------------------------
 
@@ -602,6 +743,10 @@ SEQUENCES: dict[str, type[Sequence]] = {
     "blocktower": SequenceBlockTower,
     "snake": SequenceSnake,
     "columnsrows": SequenceColumnsRows,
+    "dimon": SequenceDimOn,
+    "slowglow": SequenceSlowGlow,
+    "basswub": SequenceBassWub,
+    "rave": SequenceRave,
 }
 
 BUTTON_MAP: dict[int, str] = {
@@ -620,4 +765,8 @@ BUTTON_MAP: dict[int, str] = {
     13: "blocktower",
     14: "snake",
     15: "columnsrows",
+    16: "dimon",
+    17: "slowglow",
+    18: "basswub",
+    19: "rave",
 }

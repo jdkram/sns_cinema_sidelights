@@ -12,12 +12,17 @@ using namespace std;
 // void pulseEventAdd(int pLED, int pBrightness, float pTime, float pLength);
 
 CSequenceFadeInSparkle::CSequenceFadeInSparkle(CLEDManager *pLEDManager) :
-        CSequence(pLEDManager) { // loop every 5 seconds
+        CSequence(pLEDManager) {
 
     const float PULSE_LENGTH_MAX = 0.5f;
     const float DURATION_SECONDS = 60.0f;
     const float START_INTERVAL = 1.0f;
     const float FINISH_INTERVAL = 0.001f;
+
+    // Sparkles start dim but visible, build to a gentler peak.
+    // Keeping MAX below 100 reduces photosensitivity risk at the climax.
+    const float MIN_BRIGHTNESS = 8.0f;
+    const float MAX_BRIGHTNESS = 82.0f;
 
     const int START_LED = 1;
     const int END_LED = 24;
@@ -30,7 +35,7 @@ CSequenceFadeInSparkle::CSequenceFadeInSparkle(CLEDManager *pLEDManager) :
     while (currentTime < DURATION_SECONDS) {
 
         float progress = currentTime / DURATION_SECONDS;
-        float brightness = progress * 100.0f;
+        float brightness = MIN_BRIGHTNESS + (progress * (MAX_BRIGHTNESS - MIN_BRIGHTNESS));
         float intervalRange = FINISH_INTERVAL - START_INTERVAL;
         float interval = START_INTERVAL + (progress * intervalRange);
 
@@ -40,7 +45,9 @@ CSequenceFadeInSparkle::CSequenceFadeInSparkle(CLEDManager *pLEDManager) :
 
                 float pulseLength = PULSE_LENGTH_MAX * (1-progress) * randomFraction(); // pulses get shorter
                 float time = currentTime + (interval * randomFraction());
-                pulseEventAdd(led, (int) roundf(brightness * randomFraction()), time, pulseLength);
+                // Pulse brightness: lower bound keeps pulses above visible threshold
+                float pulseBrightness = brightness * (0.25f + 0.75f * randomFraction());
+                pulseEventAdd(led, (int) roundf(pulseBrightness), time, pulseLength);
 
                 float endTime = time + pulseLength;
 
@@ -56,7 +63,7 @@ CSequenceFadeInSparkle::CSequenceFadeInSparkle(CLEDManager *pLEDManager) :
 
     for (int led = START_LED; led <= END_LED; led++) {
 
-        brightnessSetEventAdd(led, 100, lastTime + randomFraction() * 0.2);
+        brightnessSetEventAdd(led, (int) MAX_BRIGHTNESS, lastTime + randomFraction() * 0.2);
     }
 }
 
