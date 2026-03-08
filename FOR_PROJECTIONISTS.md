@@ -3,6 +3,8 @@ human-authors: Jonny Kram
 ai-authors: ["Claude Sonnet 4.6"]
 ---
 
+MODIFIED AS A WORD DOCX AND NOW STORED ON NEXTCLOUD - THIS IS OUTDATED
+
 # Sidelight controller: quick reference for projectionists
 
 The sidelights (the LED strips along the side walls of the screen) are controlled by a small computer hidden in the equipment above the screen. Five buttons in the booth, on a black box mounted above and behind the desktop PC monitor, let you switch between lighting moods.
