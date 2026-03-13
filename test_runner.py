@@ -120,13 +120,12 @@ TROUBLESHOOTING NOTES
 - Excessive transitions (5+): Clean contacts, reflow solder, or replace worn mechanical switch
 """
 
-from __future__ import annotations
-
 import argparse
 import csv
 import sys
 import time
 from datetime import datetime
+from typing import Dict, List, Optional, Tuple
 
 import RPi.GPIO as GPIO
 
@@ -149,7 +148,7 @@ CALL_SIGNS = {
 
 
 def now_iso() -> str:
-    return datetime.now().isoformat(timespec="seconds")
+    return datetime.now().isoformat()[:19]
 
 
 def print_header(title: str) -> None:
@@ -166,7 +165,7 @@ def setup_gpio() -> None:
 
 
 def wait_for_enter(prompt: str = "Press Enter to continue...") -> None:
-    input(f"\n{prompt}")
+    input("\n" + prompt)
 
 
 def announce_two_person_step(message: str, prep_seconds: float) -> None:
@@ -177,11 +176,11 @@ def announce_two_person_step(message: str, prep_seconds: float) -> None:
     print(message)
     print("-" * 72)
     if prep_seconds > 0:
-        print(f"Start in {prep_seconds:.0f} seconds...")
+        print("Start in {:.0f} seconds...".format(prep_seconds))
         time.sleep(prep_seconds)
 
 
-def read_states() -> dict[int, int]:
+def read_states() -> Dict[int, int]:
     return {button: GPIO.input(pin) for button, pin in BUTTON_PINS.items()}
 
 
@@ -199,7 +198,7 @@ def append_log(log_writer: csv.DictWriter, event_type: str, button: int, details
 def test_smoke(log_writer: csv.DictWriter, duration: float) -> bool:
     print_header("SMOKE TEST")
     print("What this checks: buttons produce press/release events at all.")
-    print(f"For the next {duration:.0f} seconds, press any buttons a few times.")
+    print("For the next {:.0f} seconds, press any buttons a few times.".format(duration))
     print("You should see lines like: 'Button 3 PRESSED' and 'Button 3 RELEASED'.")
 
     start = time.monotonic()
@@ -212,10 +211,10 @@ def test_smoke(log_writer: csv.DictWriter, duration: float) -> bool:
             if current[button] != previous[button]:
                 if current[button] == 1:
                     seen_press[button] = True
-                    print(f"[{now_iso()}] Button {button} PRESSED")
+                    print("[{}] Button {} PRESSED".format(now_iso(), button))
                     append_log(log_writer, "pressed", button, "smoke")
                 else:
-                    print(f"[{now_iso()}] Button {button} RELEASED")
+                    print("[{}] Button {} RELEASED".format(now_iso(), button))
                     append_log(log_writer, "released", button, "smoke")
         previous = current
         time.sleep(0.005)
@@ -228,7 +227,7 @@ def test_smoke(log_writer: csv.DictWriter, duration: float) -> bool:
     return pressed_any
 
 
-def detect_single_press(timeout: float) -> int | None:
+def detect_single_press(timeout: float) -> Optional[int]:
     deadline = time.monotonic() + timeout
     previous = read_states()
     while time.monotonic() < deadline:
@@ -265,31 +264,30 @@ def test_mapping(
     for expected in range(1, 6):
         if two_person:
             announce_two_person_step(
-                (
-                    f"STEP {expected} OF 5. PRESS BUTTON {expected} NOW. "
-                    f"CALL SIGN {CALL_SIGNS[expected]}."
+                "STEP {0} OF 5. PRESS BUTTON {0} NOW. CALL SIGN {1}.".format(
+                    expected, CALL_SIGNS[expected]
                 ),
                 prep_seconds=prep_seconds,
             )
-            print(f"Listening for press for up to {step_timeout:.0f} seconds...")
+            print("Listening for press for up to {:.0f} seconds...".format(step_timeout))
         else:
             print(
-                f"\nStep {expected}/5: Press BUTTON {expected} now "
-                f"(you have {step_timeout:.0f} seconds)."
+                "\nStep {0}/5: Press BUTTON {0} now "
+                "(you have {1:.0f} seconds).".format(expected, step_timeout)
             )
 
         detected = detect_single_press(timeout=step_timeout)
         if detected is None:
-            print(f"  FAIL: no press detected for BUTTON {expected}.")
+            print("  FAIL: no press detected for BUTTON {}.".format(expected))
             append_log(log_writer, "mapping_fail", expected, "timeout_no_press")
             all_ok = False
             continue
 
-        append_log(log_writer, "mapping_detected", detected, f"expected_{expected}")
+        append_log(log_writer, "mapping_detected", detected, "expected_{}".format(expected))
         if detected == expected:
-            print(f"  PASS: detected BUTTON {detected} as expected.")
+            print("  PASS: detected BUTTON {} as expected.".format(detected))
         else:
-            print(f"  FAIL: expected BUTTON {expected}, but detected BUTTON {detected}.")
+            print("  FAIL: expected BUTTON {}, but detected BUTTON {}.".format(expected, detected))
             all_ok = False
 
         wait_for_release(detected)
@@ -326,19 +324,18 @@ def test_debounce(
     for button in range(1, 6):
         if two_person:
             announce_two_person_step(
-                (
-                    f"BUTTON {button}. QUICK TAP ONCE NOW. "
-                    f"CALL SIGN {CALL_SIGNS[button]}."
+                "BUTTON {}. QUICK TAP ONCE NOW. CALL SIGN {}.".format(
+                    button, CALL_SIGNS[button]
                 ),
                 prep_seconds=prep_seconds,
             )
             transitions = count_transitions(button=button, window_seconds=step_timeout)
         else:
-            wait_for_enter(f"Press Enter, then quickly tap BUTTON {button} once...")
+            wait_for_enter("Press Enter, then quickly tap BUTTON {} once...".format(button))
             transitions = count_transitions(button=button, window_seconds=1.2)
 
-        append_log(log_writer, "debounce_transitions", button, f"count={transitions}")
-        print(f"  BUTTON {button}: transitions seen = {transitions}")
+        append_log(log_writer, "debounce_transitions", button, "count={}".format(transitions))
+        print("  BUTTON {}: transitions seen = {}".format(button, transitions))
 
         if transitions <= 4:
             print("  PASS")
@@ -379,18 +376,17 @@ def test_hold(
     for button in range(1, 6):
         if two_person:
             announce_two_person_step(
-                (
-                    f"BUTTON {button}. PRESS AND HOLD NOW. "
-                    f"TARGET {hold_threshold:.1f} SECONDS. CALL SIGN {CALL_SIGNS[button]}."
+                "BUTTON {}. PRESS AND HOLD NOW. TARGET {:.1f} SECONDS. CALL SIGN {}.".format(
+                    button, hold_threshold, CALL_SIGNS[button]
                 ),
                 prep_seconds=prep_seconds,
             )
         else:
-            wait_for_enter(f"Press Enter, then hold BUTTON {button} for about 2 seconds...")
+            wait_for_enter("Press Enter, then hold BUTTON {} for about 2 seconds...".format(button))
 
         held_seconds = measure_high_duration(button=button, timeout=hold_timeout)
-        append_log(log_writer, "hold_duration", button, f"seconds={held_seconds:.3f}")
-        print(f"  BUTTON {button}: held for {held_seconds:.2f}s")
+        append_log(log_writer, "hold_duration", button, "seconds={:.3f}".format(held_seconds))
+        print("  BUTTON {}: held for {:.2f}s".format(button, held_seconds))
 
         if held_seconds >= hold_threshold:
             print("  PASS")
@@ -418,7 +414,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--log",
-        default=f"button_test_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+        default="button_test_log_{}.csv".format(datetime.now().strftime('%Y%m%d_%H%M%S')),
         help="CSV file path for event log",
     )
     parser.add_argument(
@@ -465,8 +461,8 @@ def main() -> int:
     print_header("Raspberry Pi GPIO Button Test Runner")
     print("Button map (logical -> BCM GPIO):")
     for button, pin in BUTTON_PINS.items():
-        print(f"  Button {button} -> GPIO {pin}")
-    print(f"\nLog file: {args.log}")
+        print("  Button {} -> GPIO {}".format(button, pin))
+    print("\nLog file: {}".format(args.log))
 
     if args.two_person:
         print("\nTwo-person mode: ON")
@@ -476,7 +472,7 @@ def main() -> int:
     else:
         print("\nTwo-person mode: OFF")
 
-    results: list[tuple[str, bool]] = []
+    results = []  # type: List[Tuple[str, bool]]
 
     with open(args.log, "w", newline="", encoding="utf-8") as log_file:
         writer = csv.DictWriter(log_file, fieldnames=["timestamp", "event_type", "button", "details"])
@@ -524,7 +520,7 @@ def main() -> int:
 
     print_header("SUMMARY")
     for test_name, passed in results:
-        print(f"{test_name:10s}: {'PASS' if passed else 'FAIL'}")
+        print("{:10s}: {}".format(test_name, 'PASS' if passed else 'FAIL'))
 
     all_passed = all(passed for _, passed in results)
     print("\nOverall:", "PASS" if all_passed else "FAIL")

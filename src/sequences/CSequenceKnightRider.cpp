@@ -19,8 +19,8 @@ CSequenceKnightRider::CSequenceKnightRider(CLEDManager *pLEDManager) :
     brightnessSetEventAddAllLeds(0, 0);
 
     const int LEDS = 24;
-    const float STAGGER = 0.2f;
-    const float FADE_TIME = 0.3f;
+    const float STAGGER = 1.0f;   // slowed 5x from 0.2f — diagnostic for I2C-speed hypothesis
+    const float FADE_TIME = 1.5f; // slowed 5x from 0.3f — diagnostic for I2C-speed hypothesis
 
     float currentTime = 0.01f;
 

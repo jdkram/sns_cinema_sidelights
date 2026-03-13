@@ -30,7 +30,7 @@ using namespace std;
 // To revert to original 1-5 mapping, set BUTTON_SEQUENCE_MAP = {1, 2, 3, 4, 5}.
 // To try ember on button 4: change index 3 from 4 to 6.
 // ---------------------------------------------------------------------------
-static const int BUTTON_SEQUENCE_MAP[] = {1, 2, 3, 4, 5};
+static const int BUTTON_SEQUENCE_MAP[] = {1, 2, 3, 6, 5};  // btn4 → Ember (was FadeInSparkle) while diagnosing KnightRider
 
 // Human-readable names printed at startup -- keep in sync with CSequenceManager.cpp.
 static const char* SEQUENCE_NAMES[] = {
@@ -134,6 +134,7 @@ void update(){
 
     sequenceManager->update();
 
-    // Sleep in case the processor needs to go off and do other things - still 100 updates a second
-//    usleep(1000000.0f * UPDATE_INTERVAL_SECONDS);
+    // Sleep to prevent I2C bus saturation on tight sequences (e.g. KnightRider overlapping fades).
+    // 10ms = 100 updates/sec -- plenty of resolution for all current sequences.
+    usleep(10000);
 }

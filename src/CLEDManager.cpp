@@ -76,9 +76,15 @@ void CLEDManager::ledBrightnessSet(int pLED, float pBrightness) {
 
         led->brightness = pBrightness;
 
-        // Convert power percentage to tick in the duty cycle
-        int powerScaledUp = pBrightness * 4095.0 / 100.0;
-
+        // Convert power percentage to tick in the duty cycle.
+        // LEDs are active-low: output HIGH = LED off, output LOW = LED on.
+        //   0%:   onTime=4095 → pwmWrite(4095) → HIGH 99.98% → LED off.               ✓
+        //   50%:  onTime=2048 → pwmWrite(2048) → HIGH 50%    → LED half on.            ✓
+        //   100%: onTime=0    → pwmWrite(0)    → pca9685FullOff (always LOW) → LED on. ✓
+        // WARNING: do NOT change onTime=0 → 4096 to "fix" brightness=100.
+        // pca9685FullOn (value >= 4096) = always HIGH = active-low LED OFF.
+        // pca9685FullOff (value == 0)   = always LOW  = active-low LED ON. This is correct.
+        int powerScaledUp = (int)(pBrightness * 4095.0 / 100.0);
         int onTime = 4095 - powerScaledUp;
 
         pwmWrite(led->pin, onTime);
