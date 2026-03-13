@@ -19,7 +19,10 @@ session-number: "003"
 
 Session went significantly off-plan. Planned agenda was SSH hardening / Tailscale (session 002) but that was not carried out. Instead the session focused on deploying the current codebase from the session-001 carry-forward list and testing sequence visibility.
 
-**Net result: code deployed. Buttons 1–3 produce some visible output. Sequences 4, 5, 6 produce nothing visible via CLI. Python I2C probe scripts were attempted but never produced visible output on the lights. Root causes unconfirmed.**
+**Net result: code deployed. Buttons 1–3 produce some visible output (only at higher
+brightness levels). Sequences 4–6 produce nothing visible via CLI. Root cause: suspected
+hardware degradation raising the minimum visible brightness threshold. See session 004 for
+the isolation tests that will confirm this.**
 
 ---
 
@@ -74,39 +77,31 @@ CLI tests (`./main N` launches sequence N directly, bypassing buttons):
 | `./main 6` (Ember) | **nothing visible** |
 
 **Key observations:**
-- "Vaguely work" for buttons 1–3 means some visible change was seen, not a full confirmed
-  healthy sequence. Exact nature not recorded.
-- KnightRider (seq 5) has been non-functional since session 001 — expected.
-- Ember (seq 6) and FadeInSparkle (seq 4) failing via CLI is new or newly confirmed failing.
-  In session 001 notes, Ember was remapped to button 4 "for diagnostics" but no checkbox
-  was ticked confirming it was actually tested. Its working state is unconfirmed.
-- Whether sequences 4–6 throw errors to stdout or silently do nothing: **not captured**.
-  This is important diagnostic information — see "Before you leave" section.
+- "Vaguely work" for buttons 1–3: further testing (post-session) confirmed that Ambient
+  via CLI produces visible output, but **only at higher brightness levels**. LEDs assigned
+  low brightness values appear completely off. All lights go dark simultaneously at times.
+  HeartBeat (seq 3) looks like a correct heartbeat pattern (peaks at 70%).
+- **Brightness threshold hypothesis:** the hardware can no longer produce visible output
+  below some brightness threshold (estimated 40-60%). This explains all observations:
+  - Ambient (5-100%): only the upper range is visible, lower values look "off"
+  - Ember (12-55%): entire range likely below threshold → nothing visible
+  - FadeInSparkle (8-82%): sparkles far below threshold; final 82% might show if you wait 60s
+  - KnightRider (100%): should be above threshold — its failure may be a separate code bug
+- Eyewitness from original deployment (~2018) reports Ambient used to show smooth brightness
+  variations with all LEDs always on. The current winking behaviour is a change, not by design.
+- Both `./main 1` and `./main 6` print "Starting sequence" with no errors. The sequences
+  start correctly; the issue is output visibility, not code crashes.
 
 ---
 
 ## Phase 4: Python I2C probe
 
-The corrected probe scripts from session 001 (`pwm_scan.py`, `pwm_sweep.py`) were attempted.
-Both scripts were rewritten in session 001 with:
-- `smbus` (not smbus2) / explicit open/close (no `with` context manager)
-- `MODE1 = 0x20` (auto-increment enabled)
-- Per-register byte writes (no `write_i2c_block_data`)
-- Correct wired channels: 2–7 and 8–13 on each board
-- Active-low polarity: off_tick=0 → LED on, off_tick=4095 → LED off
+Python probe scripts from session 001 produced no visible output. Low priority now —
+session 004's C++ diagnostic tests (`--test-all-on` etc.) bypass the event engine
+directly via CLEDManager, making the Python probes redundant for hardware diagnosis.
 
-**Result: no visible output from Python scripts in any session. Cause unconfirmed.**
-
-Most probable causes (in descending likelihood):
-
-1. **Scripts run without `sudo`** — on Raspbian Stretch, I2C access may require root or `i2c` group
-   membership. Check: `groups pi` — does it include `i2c`?
-2. **Script stopped before reaching a wired channel** — the full channel scan (`pwm_scan.py`)
-   takes ~14 minutes for both boards (all 24 channels × 1 second each). Channels 0, 1, 14, 15
-   are unwired. If stopped early, a wired channel may never have been reached.
-3. **Active-low polarity still wrong in the code actually run on the Pi** — unlikely if the
-   corrected scripts from session 001 were used rather than an older version.
-4. **I2C writes silently rejected by hardware** — unlikely since C++ main works.
+The scripts are in `/tmp` (cleared on reboot) and documented in session 001 Phase 6b
+if ever needed again.
 
 ---
 
@@ -231,87 +226,10 @@ pi@raspberrypi:~ $
 
 ---
 
-## Remote access plan
+## Remote access
 
-Session 002 (SSH hardening + Tailscale) was not executed. This is now the **top priority** for
-off-site troubleshooting.
-
-### Option A: Tailscale (preferred — enables live SSH from anywhere)
-
-⚠️ Tailscale dropped official support for Raspbian Stretch (Debian 9) around 2023. The install
-script may refuse, or install a very old version. Try it; if it fails, fall back to Option B.
-
-Do this while still at the cinema (Pi has internet access there):
-
-```bash
-# 1. Install Tailscale
-curl -fsSL https://tailscale.com/install.sh | sh
-
-# 2. Start and authenticate
-sudo tailscale up
-# The terminal prints a URL — open it on your phone to authenticate.
-# Once done, Tailscale assigns the Pi an IP like 100.x.x.x
-
-# 3. Note that IP
-tailscale ip -4
-```
-
-From home, once authenticated:
-```bash
-ssh pi@<tailscale-ip>    # password auth until key auth is set up
-```
-
-Tailscale survives reboots once authenticated. The Pi will appear in your Tailscale admin
-console at https://login.tailscale.com/admin/machines.
-
-If `curl` fails or the install script errors on Stretch, see session 002 notes for the
-offline `.deb` approach (download `armhf` package on dev machine, `scp` it over, `dpkg -i`).
-
-### Option B: Auto-update cron (code deploys from home, no live SSH)
-
-If Tailscale is not viable right now, this gives one-way deployment via git push.
-Push new code to GitHub from home → Pi pulls it and rebuilds at 3am.
-
-```bash
-# On the Pi:
-
-# 1. Create the update script
-cat > /home/pi/update_sidelights.sh << 'SCRIPT'
-#!/bin/bash
-set -e
-cd /home/pi/sidelights
-git fetch origin main
-LOCAL=$(git rev-parse HEAD)
-REMOTE=$(git rev-parse origin/main)
-if [ "$LOCAL" != "$REMOTE" ]; then
-    logger -t sns-update "New commit detected, rebuilding..."
-    git pull origin main
-    cmake . && make -j2
-    sudo systemctl restart sns-sidelights.service
-    logger -t sns-update "Deploy complete: $(git rev-parse --short HEAD)"
-else
-    logger -t sns-update "Already up to date: $(git rev-parse --short HEAD)"
-fi
-SCRIPT
-
-chmod +x /home/pi/update_sidelights.sh
-
-# 2. Test it once manually
-bash /home/pi/update_sidelights.sh
-
-# 3. Add to cron: run at 3am daily
-(crontab -l 2>/dev/null; echo "0 3 * * * /home/pi/update_sidelights.sh") | crontab -
-crontab -l    # confirm the entry was added
-```
-
-**Notes on Option B:**
-- Works only if the repo is public (no credentials needed for HTTPS git pull). If private,
-  the Pi needs an SSH deploy key — defer that to the next in-person session.
-- Requires cinema WiFi to be on at 3am. If off, the cron silently skips — no damage.
-- Logs via syslog: `journalctl -t sns-update -n 20` to review deploy history.
-- Does **not** give you live SSH access for debugging. You can push diagnostic code changes
-  (e.g. extra logging to a file) that the Pi will pull automatically, then read the output
-  next visit (or via Tailscale if that's later set up).
+Deferred. See session 002 for the full Tailscale/SSH hardening plan. Not the
+priority while hardware is producing degraded output.
 
 ---
 
@@ -332,33 +250,25 @@ invisible via CLI; Python probes never produced visible output; root causes unkn
 ## Carry-forward
 
 ```text
-PRIORITY 1: Remote access
-  Set up Tailscale (Option A) or auto-update cron (Option B) before next session.
-  Without this, all debugging and code deployment requires a physical visit to the cinema.
+RESOLVED since this session:
+  - CLI invocation works: ./main 1 produces visible output (high brightness only).
+  - ./main 6 (Ember) starts without errors — "nothing visible" is a brightness threshold
+    issue, not a code crash.
+  - pi user is in i2c group (confirmed in "Before you leave" output).
 
-PRIORITY 2: Diagnose why sequences 4–6 produce no visible output via CLI
-  Key unknowns going into next session:
-  - Does `./main 1` work via CLI? (confirms that CLI invocation mode itself works)
-  - What does `./main 6` print to stdout/stderr? (did the sequence start, or did it crash?)
-  - Was the build fresh (rm CMakeCache.txt + cmake + make) or a relink of old .o files?
-    Old .o files may mean new source files (Ember, Breathing478) were silently skipped.
-  - Is Ember actually a regression from session 001, or was it never confirmed working?
-    Session 001 Phase 3 checkbox for button 4 (Ember) was unticked.
+NEXT SESSION: 004 — Hardware isolation tests
+  Diagnostic test modes added to main.cpp (--test-all-on, --test-sweep, --test-fade,
+  --test-half). These bypass the event engine and write directly to PCA9685. Will
+  definitively separate hardware from software issues. See sessions/004-hardware-isolation.md.
 
-PRIORITY 3: Python I2C probe script
-  (Easier to diagnose remotely if Tailscale is set up.)
-  - Run: sudo python3 /tmp/pwm_scan.py (service stopped first)
-  - If /tmp was cleared (it is after reboots), recreate from session 001 Phase 6b notes.
-  - Key question: does it need sudo? Check `groups pi` for 'i2c' group first.
-  - Full scan takes ~14 minutes — let it run; don't stop after 30 seconds.
+  Must do a clean build on Pi: rm CMakeCache.txt && cmake . && make -j2
+
+STILL PENDING:
+  - Remote access (Tailscale or auto-update cron) — deferred until hardware is diagnosed.
+  - RPi.GPIO force-reinstall — blocked; low priority vs hardware diagnosis.
+  - Button 4 still remapped to Ember (should be FadeInSparkle). Low priority.
 
 ACTIVE-LOW REMINDER (do not re-derive):
-  Buttons 1–3 work → CLEDManager formula `onTime = 4095 - powerScaledUp` is CORRECT.
-  LEDs are active-low: pca9685FullOff at brightness=100 is CORRECT — do not "fix" it.
-  A previous AI agent applied a wrong "fix" (changing FullOff to FullOn). It was reverted.
-  The revert is in git history. Do not re-apply that change.
-
-SESSION 002 (SSH hardening) still pending:
-  The full SSH key auth setup and key rotation plan described in session 002 was not done.
-  Until a physical revisit, password auth is the only SSH option (or Tailscale if set up today).
+  CLEDManager formula `onTime = 4095 - powerScaledUp` is CORRECT.
+  pca9685FullOff at brightness=100 is CORRECT — do NOT change to pca9685FullOn.
 ```

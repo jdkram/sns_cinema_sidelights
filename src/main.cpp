@@ -1,4 +1,4 @@
-// author: Paul?, Jonny Kram; ai-model: Claude Haiku; status: "#ai-input"
+// author: Paul?, Jonny Kram; ai-model: Claude Haiku, Claude Opus 4.6; status: "#ai-input"
 #include <iostream>
 #include <vector>
 #include <wiringPi.h>
@@ -22,19 +22,20 @@ using namespace std;
 // Edit BUTTON_SEQUENCE_MAP to change what each physical button triggers.
 // Indices are 0-based (index 0 = button 1), values are 1-based sequence numbers.
 //
-// Current sequence slots:
-//   1 = Ambient        2 = FadeOutSimple  3 = HeartBeat
-//   4 = FadeInSparkle  5 = KnightRider    6 = Ember
-//   7 = Breathing478
+// Current sequence slots (see also ENTRY_NAMES array below):
+//   1 = Ambient        5 = KnightRider     9 = Static 50%
+//   2 = FadeOutSimple  6 = Ember           10 = Static 75%
+//   3 = HeartBeat      7 = Breathing478    11 = Static 100%
+//   4 = FadeInSparkle  8 = AmbientHigh
 //
 // To revert to original 1-5 mapping, set BUTTON_SEQUENCE_MAP = {1, 2, 3, 4, 5}.
 // To try ember on button 4: change index 3 from 4 to 6.
 // ---------------------------------------------------------------------------
-static const int BUTTON_SEQUENCE_MAP[] = {1, 2, 3, 6, 5};  // btn4 → Ember (was FadeInSparkle) while diagnosing KnightRider
+static const int BUTTON_SEQUENCE_MAP[] = {1, 2, 3, 10, 8};  // btn4 → Static 75%, btn5 → AmbientHigh
 
-// Human-readable names printed at startup -- keep in sync with CSequenceManager.cpp.
-static const char* SEQUENCE_NAMES[] = {
-    "",                // 0 unused (sequences are 1-based)
+// All callable entries: sequences 1-11, then hardware diagnostics 12-15.
+static const char* ENTRY_NAMES[] = {
+    "",                       // 0 unused (1-based)
     "1: Ambient",
     "2: FadeOutSimple",
     "3: HeartBeat",
@@ -42,8 +43,18 @@ static const char* SEQUENCE_NAMES[] = {
     "5: KnightRider",
     "6: Ember",
     "7: Breathing478",
+    "8: AmbientHigh",         // ambient with 55-100% floor (threshold workaround)
+    "9: Static 50%",
+    "10: Static 75%",
+    "11: Static 100%",
+    "12: DIAG all-on",        // all LEDs 100% for 10s
+    "13: DIAG sweep",         // each LED individually, 2s each
+    "14: DIAG fade",          // smooth 0->100->0 on all LEDs
+    "15: DIAG half",          // all LEDs 50% for 10s
 };
-static const int SEQUENCE_COUNT = 7;
+static const int SEQUENCE_COUNT = 11;
+static const int DIAG_START = 12;
+static const int ENTRY_COUNT = 15;
 
 #define BUTTON_1 22
 #define BUTTON_2 27
@@ -57,21 +68,111 @@ CSequenceManager* sequenceManager = nullptr;
 vector<CDigitalButton> mButtons;
 
 static void printHelp() {
-    cout << "\nAvailable sequences:" << endl;
+    cout << "\nSequences:" << endl;
     for (int i = 1; i <= SEQUENCE_COUNT; i++) {
-        cout << "  " << SEQUENCE_NAMES[i] << endl;
+        cout << "  " << ENTRY_NAMES[i] << endl;
+    }
+    cout << "\nHardware diagnostics (bypass event engine, test LEDs directly):" << endl;
+    for (int i = DIAG_START; i <= ENTRY_COUNT; i++) {
+        cout << "  " << ENTRY_NAMES[i] << endl;
     }
     cout << "\nButton map:" << endl;
     for (size_t i = 0; i < sizeof(BUTTON_SEQUENCE_MAP) / sizeof(BUTTON_SEQUENCE_MAP[0]); i++) {
         int seq = BUTTON_SEQUENCE_MAP[i];
-        cout << "  Button " << (i + 1) << " -> " << SEQUENCE_NAMES[seq] << endl;
+        cout << "  Button " << (i + 1) << " -> " << ENTRY_NAMES[seq] << endl;
     }
     cout << endl;
-    cout << "Usage: ./sns_lights [SEQUENCE_NUMBER]" << endl;
-    cout << "  ./sns_lights        -- run normally, buttons active" << endl;
-    cout << "  ./sns_lights 6      -- start Ember immediately, buttons active" << endl;
-    cout << "  ./sns_lights --help -- print this message" << endl;
+    cout << "Usage: ./main [NUMBER]" << endl;
+    cout << "  ./main        -- run normally, buttons active" << endl;
+    cout << "  ./main 6      -- start Ember immediately, buttons active" << endl;
+    cout << "  ./main 13     -- run LED sweep diagnostic" << endl;
+    cout << "  ./main --help -- print this message" << endl;
     cout << endl;
+}
+
+// ---------------------------------------------------------------------------
+// Hardware diagnostic tests (entries 8-11)
+// These bypass the event/sequence engine entirely and write directly to the
+// PCA9685 via CLEDManager. If these work but sequences don't, the problem
+// is in software. If these fail, the problem is hardware/wiring.
+// ---------------------------------------------------------------------------
+
+static int runDiagnostic(int diagNumber) {
+    cout << "\n=== DIAGNOSTIC: " << ENTRY_NAMES[diagNumber] << " ===" << endl;
+
+    wiringPiSetupGpio();
+    ledManager = new CLEDManager();
+
+    if (diagNumber == 12) {
+        // All LEDs to 100% for 10 seconds.
+        cout << "Setting all 24 LEDs to 100%..." << endl;
+        for (int led = 1; led <= 24; led++) {
+            ledManager->ledBrightnessSet(led, 100);
+        }
+        cout << "All LEDs should now be ON. Waiting 10 seconds..." << endl;
+        cout << "Count how many of the 24 LEDs are lit." << endl;
+        usleep(10000000);
+
+        cout << "Turning all LEDs off..." << endl;
+        for (int led = 1; led <= 24; led++) {
+            ledManager->ledBrightnessSet(led, 0);
+        }
+        cout << "Done. How many LEDs were on? (Expected: 24)" << endl;
+
+    } else if (diagNumber == 13) {
+        // Light each LED individually, 2 seconds each.
+        cout << "Sweeping through LEDs 1-24, one at a time (2s each)..." << endl;
+        cout << "Note which LEDs light up and which don't." << endl;
+        for (int led = 1; led <= 24; led++) {
+            cout << "  LED " << led << " ON" << endl;
+            ledManager->ledBrightnessSet(led, 100);
+            usleep(2000000);
+            ledManager->ledBrightnessSet(led, 0);
+        }
+        cout << "Sweep complete. Which LEDs were dead?" << endl;
+
+    } else if (diagNumber == 14) {
+        // Smooth fade 0 -> 100 -> 0 on all LEDs, direct writes.
+        cout << "Fading all LEDs: 0 -> 100 over 5s, then 100 -> 0 over 5s." << endl;
+        cout << "Watch for SMOOTH brightness change vs winking/flickering." << endl;
+
+        for (int step = 0; step <= 100; step++) {
+            for (int led = 1; led <= 24; led++) {
+                ledManager->ledBrightnessSet(led, step);
+            }
+            cout << "  brightness: " << step << "%" << "\r" << flush;
+            usleep(50000);
+        }
+        cout << endl;
+
+        for (int step = 100; step >= 0; step--) {
+            for (int led = 1; led <= 24; led++) {
+                ledManager->ledBrightnessSet(led, step);
+            }
+            cout << "  brightness: " << step << "%" << "\r" << flush;
+            usleep(50000);
+        }
+        cout << endl << "Done. Was the fade smooth or did LEDs wink/flicker?" << endl;
+
+    } else if (diagNumber == 15) {
+        // All LEDs to 50%, hold.
+        cout << "Setting all 24 LEDs to 50%..." << endl;
+        for (int led = 1; led <= 24; led++) {
+            ledManager->ledBrightnessSet(led, 50);
+        }
+        cout << "LEDs should be at half brightness. Waiting 10 seconds..." << endl;
+        cout << "Are they steady or flickering?" << endl;
+        usleep(10000000);
+
+        cout << "Turning all LEDs off..." << endl;
+        for (int led = 1; led <= 24; led++) {
+            ledManager->ledBrightnessSet(led, 0);
+        }
+        cout << "Done." << endl;
+    }
+
+    delete ledManager;
+    return 0;
 }
 
 int main(int argc, char** argv) {
@@ -83,6 +184,17 @@ int main(int argc, char** argv) {
 
     if (argc > 1 && strcmp(argv[1], "--help") == 0) {
         return 0;
+    }
+
+    // Parse the entry number from CLI arg (sequence or diagnostic).
+    int entry = 0;
+    if (argc > 1) {
+        entry = atoi(argv[1]);
+    }
+
+    // Diagnostics (8-11) bypass the event engine entirely.
+    if (entry >= DIAG_START && entry <= ENTRY_COUNT) {
+        return runDiagnostic(entry);
     }
 
     srand(time(0)); // Seed RNG used by random-pattern sequences (Ember, Ambient, etc.)
@@ -98,16 +210,13 @@ int main(int argc, char** argv) {
     mButtons.push_back(CDigitalButton(BUTTON_4));
     mButtons.push_back(CDigitalButton(BUTTON_5));
 
-    // Optional CLI arg: start a sequence immediately (buttons still work).
-    if (argc > 1) {
-        int seq = atoi(argv[1]);
-        if (seq >= 1 && seq <= SEQUENCE_COUNT) {
-            cout << "CLI: starting " << SEQUENCE_NAMES[seq] << endl;
-            sequenceManager->sequenceStart(seq);
-        } else {
-            cout << "Unknown sequence number: " << argv[1]
-                 << " (valid range: 1-" << SEQUENCE_COUNT << ")" << endl;
-        }
+    // Start a sequence immediately if requested (buttons still work).
+    if (entry >= 1 && entry <= SEQUENCE_COUNT) {
+        cout << "CLI: starting " << ENTRY_NAMES[entry] << endl;
+        sequenceManager->sequenceStart(entry);
+    } else if (entry != 0) {
+        cout << "Unknown entry: " << argv[1]
+             << " (valid range: 1-" << ENTRY_COUNT << ")" << endl;
     }
 
     while(1){
@@ -127,7 +236,7 @@ void update(){
 
         if(button->wasPressed()){
             int seq = BUTTON_SEQUENCE_MAP[i];
-            cout << "Button " << (i + 1) << " -> " << SEQUENCE_NAMES[seq] << endl;
+            cout << "Button " << (i + 1) << " -> " << ENTRY_NAMES[seq] << endl;
             sequenceManager->sequenceStart(seq);
         }
     }

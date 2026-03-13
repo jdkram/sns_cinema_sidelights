@@ -3,9 +3,15 @@ human-authors: Jonny Kram
 ai-authors: ["Claude Sonnet 4.6"]
 session-date: TBD
 session-number: "002"
+status: DEFERRED — do session 004 (hardware isolation) first
 ---
 
 # Session 002: SSH hardening, cinema WiFi, Tailscale
+
+> **Status:** Deferred. Remote access is useful but not the priority while the
+> hardware is producing degraded output. Run session 004's diagnostic tests first.
+> Once the lights are working reliably, remote access becomes valuable for
+> monitoring and deploying sequence changes without a cinema visit.
 
 **Goal:** Enable remote access so the system can be monitored and shut down without a physical visit.
 

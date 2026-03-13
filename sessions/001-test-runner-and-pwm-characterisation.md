@@ -7,9 +7,9 @@ session-number: "001"
 
 # Session 001: Get test_runner.py working; characterise PWM and light responsiveness
 
-**Date:** ___________
+**Date:** 13/03/2026
 **Location:** Star and Shadow Cinema
-**Tester:**
+**Tester:** Jonny Kram
 **Commit on Pi before session:** (run `git -C /home/pi/sidelights rev-parse --short HEAD`)
 **Commit on dev machine before session:** (run `git rev-parse --short HEAD`)
 
@@ -165,10 +165,10 @@ This Pi has likely not been built against since ~2019. New sequence files (Ember
   - If cmake fails with `wiringPi not found`: wiringPi may need reinstalling (see below)
   - If make fails with missing `.cpp` files: cmake picked up a stale cache; `rm CMakeCache.txt` then `cmake . && make -j2`
   - **Note:** this build includes the `usleep(10000)` patch in `update()` — the tight loop had no sleep at all before; this prevents I2C bus saturation on KnightRider and explains why button 5 did nothing visible on the old binary.
-- [ ] Stop service before testing: `sudo systemctl stop sns-sidelights.service`
-- [ ] `./main` -- confirm starts cleanly, Ctrl+C when done
-- [ ] `sudo systemctl start sns-sidelights.service`
-- [ ] `sudo systemctl status sns-sidelights.service`
+- [x] Stop service before testing: `sudo systemctl stop sns-sidelights.service`
+- [x] `./main` -- confirm starts cleanly, Ctrl+C when done
+- [x] `sudo systemctl start sns-sidelights.service`
+- [x] `sudo systemctl status sns-sidelights.service`
 - [ ] Note deployed commit:
 
 **If wiringPi is missing:** it was retired in 2019 but should still be installed on a 2019 Pi. Check with `dpkg -l | grep wiringpi`. If absent, build from source:
@@ -333,7 +333,7 @@ pip3 list 2>/dev/null | grep -i gpio
 **What you see:**
 
 ```text
-
+DIDN'T DO THIS BEFORE HEADING IN - INTERNET ACCESS WAS RELIABLE SO WENT DOWN THAT ROUTE
 ```
 
 ---
@@ -807,28 +807,28 @@ sudo systemctl status sns-sidelights.service
 **Carry forward to next session:**
 
 ```text
-- RPi.GPIO: BLOCKED. Dist-info for 0.7.1 present but .so extension missing.
-  Next session: `ls /usr/local/lib/python3.5/dist-packages/RPi/` to confirm,
-  then: `sudo pip3 install --force-reinstall --no-binary :all: RPi.GPIO`
-  Phase 5 (test_runner.py / button test suite) is gated on this.
+STATUS AS OF SESSION 003 (2026-03-13):
 
-- BUILD: wiringPi.h header problem is now fixed in CMakeLists.txt (find_path added).
-  But cmake cache is stale — must run `rm CMakeCache.txt && cmake . && make -j2` on Pi.
-  This is mandatory before any button test — the current Pi binary still has incorrect
-  CLEDManager code (the wrong FullOn "fix" that was never deployed due to build failure).
-  Wait — actually the build failed BEFORE the wrong fix was deployed, so the Pi binary
-  is the original 2019 build. Regardless: the repo is now correct; just need a clean build.
+RESOLVED:
+  - BUILD: deployed successfully in session 003 (commit 9e20cad). wiringPi header
+    fix works. Clean build needed again for session 004 (new diagnostic code).
+  - CLI invocation confirmed working: ./main 1 produces visible output.
+  - Pi user is in i2c group.
 
-- Button 4: remapped to Ember for diagnostics. FadeInSparkle is probably working but
-  sparkles are too dim to see in cinema lighting. Remap back after KnightRider is resolved:
-  change BUTTON_SEQUENCE_MAP index 3 from 6 back to 4 in main.cpp.
+SUPERSEDED BY SESSION 004 PLAN:
+  The Phase 6 Python probe scripts and RPi.GPIO install are no longer the priority.
+  Session 004 adds C++ diagnostic test modes (--test-all-on, --test-sweep, --test-fade,
+  --test-half) that bypass the event engine entirely. These will determine whether
+  the problem is hardware degradation or sequence code bugs.
 
-- Button 5 (KnightRider): total failure. Cause unknown after 3 hypotheses eliminated.
-  Slowed 5x (STAGGER=1.0s, FADE_TIME=1.5s) for next test. If still nothing at 5x slow,
-  I2C speed is not the cause and something deeper needs investigation.
-  At 5x slow: full sweep takes ~48s, each LED fades over 1.5s. Should be clearly visible.
+  Key finding since session 001: eyewitness says Ambient used to show smooth brightness
+  on all LEDs. Now only high brightness values are visible, low values appear off.
+  This points to hardware degradation (8-year-old system), not software bugs, as the
+  primary cause for sequences 4-6 being invisible (they use lower brightness ranges).
 
-- Phase 6 probe scripts: rewritten with per-register byte writes (no write_i2c_block_data),
-  MODE1=0x20, correct active-low polarity, correct channels (2-7, 8-13 not 0).
-  Separate scan script (pwm_scan.py) and sweep script (pwm_sweep.py).
+STILL OPEN:
+  - RPi.GPIO .so missing — low priority until hardware is diagnosed.
+  - Button 4 remapped to Ember — low priority.
+  - KnightRider (100% brightness) still unexplained — may be a code bug separate
+    from the brightness threshold issue. Session 004 test-sweep will isolate this.
 ```
