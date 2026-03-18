@@ -75,11 +75,11 @@ cinema with 5 working buttons.
 
 | Button | Expected sequence | Works? | Notes |
 |--------|-------------------|--------|-------|
-| 1 | Ambient (seq 1) | | |
-| 2 | FadeOutSimple (seq 2) | | |
-| 3 | HeartBeat (seq 3) | | |
-| 4 | Static 75% (seq 10) | | should be steady, no animation |
-| 5 | AmbientHigh (seq 8) | | like Ambient but no winking — all LEDs always visibly on |
+| 1 | Ambient (seq 1) | ok | |
+| 2 | FadeOutSimple (seq 2) | ok | |
+| 3 | HeartBeat (seq 3) | ok | |
+| 4 | Static 75% (seq 10) | looks ok | should be steady, no animation |
+| 5 | AmbientHigh (seq 8) | kind of works? can barely see difference. It looks like all of them are coming up and down at the same rate, not individual panels. | like Ambient but no winking — all LEDs always visibly on |
 
 ### Key question for button 5 (AmbientHigh)
 
@@ -87,14 +87,14 @@ AmbientHigh is the same as Ambient but with a 55-100% brightness floor. If
 the brightness threshold theory is correct, AmbientHigh should look like what
 Ambient originally looked like: all LEDs always on, smoothly varying.
 
-- [ ] Does AmbientHigh show smooth brightness variation without winking?
-- [ ] Compare directly: press button 1 (Ambient), then button 5 (AmbientHigh).
+- [x] Does AmbientHigh show smooth brightness variation without winking?
+- [x] Compare directly: press button 1 (Ambient), then button 5 (AmbientHigh).
   Is AmbientHigh visibly better?
 
 **Result:**
 
 ```
-[describe the comparison]
+yeajh it's better but it looks like they're all fading in and out at the same time. Barely perceptible changes in brightness.
 ```
 
 If AmbientHigh looks good, it confirms the threshold theory and we have a
@@ -116,7 +116,7 @@ sudo ./main 12
 
 **Expected:** All 24 LEDs light up at full brightness for 10 seconds.
 
-- [ ] How many LEDs lit up? _____ / 24
+- [x] How many LEDs lit up? 24 / 24
 - [ ] Were any LEDs noticeably dimmer than others? Which ones?
 - [ ] Were any LEDs flickering or unstable?
 - [ ] Were LEDs warm white (expected) or discoloured?
@@ -124,7 +124,7 @@ sudo ./main 12
 **Result:**
 
 ```
-[describe what you saw -- be specific about which LEDs are dead/dim/flickering]
+all ok
 ```
 
 **Decision tree:**
@@ -148,7 +148,7 @@ Fill in this map as the sweep runs. Mark each LED: OK / DIM / FLICKER / DEAD
 
 | LED | Board | Physical position | Status |
 |-----|-------|-------------------|--------|
-| 1   | 0x40  | Left row 1, #1    |        |
+| 1   | 0x40  | Left row 1, #1    | DEAD |
 | 2   | 0x40  | Left row 1, #2    |        |
 | 3   | 0x40  | Left row 1, #3    |        |
 | 4   | 0x40  | Left row 1, #4    |        |
@@ -195,7 +195,7 @@ sudo ./main 14
 **Expected:** All LEDs smoothly brighten from off to full over 5 seconds, then
 smoothly dim back to off over 5 seconds. No steps, no winking, no flickering.
 
-- [ ] Was the fade smooth (gradual brightness change)?
+- [x] Was the fade smooth (gradual brightness change)?
 - [ ] Or did LEDs wink on/off (binary, no intermediate brightness)?
 - [ ] Or did LEDs flicker (brightness jumping around erratically)?
 - [ ] Was the behaviour consistent across all LEDs, or did some fade smoothly while others flickered?
@@ -203,7 +203,7 @@ smoothly dim back to off over 5 seconds. No steps, no winking, no flickering.
 **Result:**
 
 ```
-[describe what you saw]
+27% brightness seems to be the threshold. Behaviour consistent across all.
 ```
 
 **This is the key test for the Ambient degradation report.** If the fade is
@@ -221,13 +221,13 @@ sudo ./main 15
 
 **Expected:** All LEDs at steady 50% brightness for 10 seconds. No flickering.
 
-- [ ] Are LEDs steady or flickering?
-- [ ] Is brightness visibly "half" (dimmer than test 1 but clearly on)?
+- [x] Are LEDs steady or flickering?
+- [x] Is brightness visibly "half" (dimmer than test 1 but clearly on)?
 
 **Result:**
 
 ```
-[describe what you saw]
+steady for 10 sec
 ```
 
 **Why this matters:** If full brightness (100%) works but 50% flickers, the
@@ -261,7 +261,7 @@ light up within the first few seconds). Ctrl+C.
 **Result:**
 
 ```
-[describe what you saw]
+no LEDs lit up at all
 ```
 
 ### Test 6: Ember via CLI (only if test 4 showed 50% is visible)
@@ -276,13 +276,13 @@ sudo ./main 6
 
 Watch for 15 seconds. Ctrl+C.
 
-- [ ] Did lights come on?
-- [ ] What did you see?
+- [x] Did lights come on?
+- [x] What did you see?
 
 **Result:**
 
 ```
-[describe what you saw]
+zero results
 ```
 
 ---
@@ -305,22 +305,22 @@ If any LEDs were dead, dim, or flickering in the diagnostic tests:
 **Physical inspection notes:**
 
 ```
-[anything you find]
+solo, so no ladder help - didn't physically inspect this time.
 ```
 
 ---
 
 ## Sign-off
 
-- [ ] All 5 buttons confirmed working (Phase 2)
-- [ ] Diagnostic results above are filled in completely
-- [ ] Service restarted: `sudo systemctl start sns-sidelights.service`
-- [ ] Service healthy: `sudo systemctl status sns-sidelights.service`
-- [ ] Lights in reasonable state
+- [x] All 5 buttons confirmed working (Phase 2)
+- [x] Diagnostic results above are filled in completely
+- [x] Service restarted: `sudo systemctl start sns-sidelights.service`
+- [x] Service healthy: `sudo systemctl status sns-sidelights.service`
+- [x] Lights in reasonable state
 
 **End commit on Pi:** (run `git -C /home/pi/sidelights rev-parse --short HEAD`)
 
-**Overall result:** PASS / FAIL / PARTIAL
+**Overall result:** PARTIAL
 
 **Diagnosis:**
 
@@ -328,11 +328,53 @@ If any LEDs were dead, dim, or flickering in the diagnostic tests:
 [ ] Hardware is fine -- problem is in sequence/event code
 [ ] Hardware has partial failures -- specific channels/connections need repair
 [ ] Hardware fundamentally broken -- PCA9685 boards or power supply need replacement
-[ ] Mixed -- some hardware issues AND some software issues
+[x] Mixed -- some hardware issues AND some software issues
 ```
+
+**Key findings (post-session analysis with Claude):**
+
+**Hardware: broadly OK, one confirmed dead channel, one brightness threshold**
+- LED 1 (board 0x40, Left row 1 #1) is dead. All others appear functional (Test 1 all-on passed 24/24).
+- Confirmed brightness threshold at ~27%. LEDs below this value appear off. This explains why Ember
+  (12-55% range) and the original Ambient (5-100% range, ~winking) look dim or invisible at times.
+- 50% static hold was steady, ruling out PWM corruption or capacitor noise on the signal lines.
+- Smooth fade confirms hardware can produce clean PWM -- the "winking" in Ambient is a software/
+  brightness-threshold interaction, not hardware degradation.
+
+**Software: individual-panel addressing via the event engine appears broken**
+- Every sequence that works drives ALL channels simultaneously (same or different values):
+    Ambient (1), HeartBeat (3), FadeOutSimple (2), Static 75% (10).
+- Every sequence that tries to address panels INDEPENDENTLY produced zero or near-zero output:
+    KnightRider (5) -- zero. Ember (6) -- zero.
+- AmbientHigh (8) looks "all moving together" even though its code assigns each LED a different
+  random target. This is partly perceptual (55-100% is a narrow visible range), but is also
+  consistent with the independent-addressing hypothesis.
+- DIAG sweep (./main 13) -- which bypasses the event engine entirely and writes to one LED at a
+  time with a 2s direct-write hold -- works correctly. This confirms the hardware CAN address
+  individual panels; the failure is in how the event/sequence engine handles sparse single-channel
+  writes.
+- Hypothesis: the PCA9685 / WiringPi driver behaves correctly when all 16 channels on a board are
+  written to in rapid succession (as Ambient does every 2s for all 24 LEDs), but may drop or ignore
+  writes when only 1-2 channels are written sparsely. Worth checking pca9685.c pwmWrite
+  implementation for any all-channel shortcut or buffering that would explain this.
+- KnightRider has a pre-existing acknowledged bug (comment in CSequenceKnightRider.cpp).
+
+**Fix applied this session:**
+- AmbientHigh MIN_BRIGHTNESS lowered from 55% to 30% (just above the 27% threshold), so AmbientHigh
+  now spans 30-100% and should show genuine independent panel variation.
 
 **What to carry forward to next session:**
 
 ```
-[based on results]
+1. Investigate why single-channel event-engine writes (KnightRider, Ember) produce zero output
+   while all-channel writes (Ambient) work. Check pca9685.c for buffering or all-channel writes.
+   Key test: write a minimal sequence that addresses only 1 LED via the event engine and logs
+   whether ledBrightnessSet is actually being called and what it sends to the PCA9685.
+
+2. Verify AmbientHigh (30-100% floor) on live hardware -- should show better independent variation.
+
+3. LED 1 (Left row 1, #1) is dead -- physical inspection needed when two people present (ladder).
+   Wiggle test recommended: run ./main 12 (all-on) and wiggle connectors to check for cold joints.
+
+4. Complete the LED sweep map (Test 2) -- only LED 1 status was recorded this session.
 ```
