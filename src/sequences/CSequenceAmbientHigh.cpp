@@ -12,7 +12,7 @@ CSequenceAmbientHigh::CSequenceAmbientHigh(CLEDManager *pLEDManager) :
         CSequence(pLEDManager, true, SEQUENCE_LENGTH) {
 
     const int LEDS = 24;
-    const int MIN_BRIGHTNESS = 55;
+    const int MIN_BRIGHTNESS = 30;
     const int MAX_BRIGHTNESS = 100;
 
     float currentTime = 0.0f;
