@@ -17,6 +17,8 @@ void CBrightnessSetEvent::update(float pElapsedSequenceTime){
     mSequence->ledBrightnessSet(this, mLED, mTargetBrightness);
     mTriggered = true;
 
-//    cout << "BRIGHTNESS_SET on " << mLED << " at " << pElapsedSequenceTime << "ms with brightness " << mTargetBrightness << endl;
+    cout << "CBrightnessSetEvent trigger: LED=" << mLED
+         << " brightness=" << mTargetBrightness
+         << " at=" << pElapsedSequenceTime << "ms" << endl;
   }
 }

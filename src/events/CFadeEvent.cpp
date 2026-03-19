@@ -33,7 +33,10 @@ void CFadeEvent::update(float pElapsedSequenceTime) {
         if (!mTriggered) {
             mInitialBrightness = mSequence->ledBrightnessGet(mLED);
             mSequence->channelReserve(this, mLED);
-            // floatPrint("mInitialBrightness", mInitialBrightness);
+            cout << "CFadeEvent trigger: LED=" << mLED
+                 << " from=" << mInitialBrightness
+                 << " to=" << mTargetBrightness
+                 << " at=" << pElapsedSequenceTime << "ms" << endl;
             mTriggered = true;
         }
 

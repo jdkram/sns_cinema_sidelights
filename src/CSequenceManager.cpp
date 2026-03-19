@@ -12,6 +12,7 @@
 #include "sequences/CSequenceBreathing478.h"
 #include "sequences/CSequenceStaticBrightness.h"
 #include "sequences/CSequenceAmbientHigh.h"
+#include "sequences/CSequenceTestSingle.h"
 
 using namespace std;
 
@@ -19,7 +20,7 @@ using namespace std;
 //   1 = Ambient          5 = KnightRider      9 = Static 50%
 //   2 = FadeOutSimple     6 = Ember           10 = Static 75%
 //   3 = HeartBeat         7 = Breathing478    11 = Static 100%
-//   4 = FadeInSparkle     8 = AmbientHigh
+//   4 = FadeInSparkle     8 = AmbientHigh     12 = TestSingle (event engine diagnostic)
 // To add or reorder: push_back in the order you want and update main.cpp's ENTRY_NAMES.
 CSequenceManager::CSequenceManager(CLEDManager* pLEDManager) : mCurrentSequence(nullptr){
 
@@ -34,6 +35,7 @@ CSequenceManager::CSequenceManager(CLEDManager* pLEDManager) : mCurrentSequence(
     mSequences.push_back(new CSequenceStaticBrightness(pLEDManager, 50)); //  9
     mSequences.push_back(new CSequenceStaticBrightness(pLEDManager, 75)); // 10
     mSequences.push_back(new CSequenceStaticBrightness(pLEDManager, 100));// 11
+    mSequences.push_back(new CSequenceTestSingle(pLEDManager));           // 12
 }
 
 void CSequenceManager::sequenceStart(int pSequenceIndex){

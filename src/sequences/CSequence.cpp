@@ -49,6 +49,14 @@ void CSequence::ledBrightnessSet(CEvent *pEvent, int pLED, int pBrightness) {
         if (mReservedChannels[pLED - 1] && pEvent == mReservedChannels[pLED - 1]) {
 
             mLEDManager->ledBrightnessSet(pLED, pBrightness);
+
+        } else {
+
+            // Reservation mismatch: another event owns this channel, write blocked.
+            // If this fires unexpectedly, it indicates a channel-ownership race.
+            cout << "ledBrightnessSet BLOCKED: LED=" << pLED
+                 << " reserved=" << mReservedChannels[pLED - 1]
+                 << " caller=" << pEvent << endl;
         }
     }
 }
